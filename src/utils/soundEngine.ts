@@ -99,8 +99,18 @@ class SoundEngine {
 
   public unlockNow(): void {
     const ctx = this.getContext();
-    if (ctx && ctx.state === 'suspended') {
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
+    }
+    try {
+      const silent = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = silent;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch {
+      // ignore
     }
   }
 
@@ -420,6 +430,81 @@ class SoundEngine {
       osc.start(t);
       osc.stop(t + 0.68);
     });
+  }
+
+  /**
+   * Tactile PC Monitor Power-On + Camera Zoom Whoosh (called directly on user click)
+   */
+  public playMonitorPowerOn(): void {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const t = ctx.currentTime;
+
+    // 1. Crisp monitor button switch click
+    this.playMouseClick();
+
+    // 2. Warm workstation CRT/OLED power-up sweep
+    const sweep = ctx.createOscillator();
+    const sGain = ctx.createGain();
+    sweep.type = 'sine';
+    sweep.frequency.setValueAtTime(95, t);
+    sweep.frequency.exponentialRampToValueAtTime(380, t + 0.34);
+
+    sGain.gain.setValueAtTime(0.0001, t);
+    sGain.gain.linearRampToValueAtTime(0.065, t + 0.04);
+    sGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+
+    sweep.connect(sGain);
+    sGain.connect(ctx.destination);
+    sweep.start(t);
+    sweep.stop(t + 0.4);
+
+    // 3. Camera zoom air whoosh
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.getNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.setValueAtTime(1.8, t);
+    filter.frequency.setValueAtTime(220, t);
+    filter.frequency.exponentialRampToValueAtTime(1600, t + 0.32);
+
+    const nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(0.0001, t);
+    nGain.gain.linearRampToValueAtTime(0.05, t + 0.08);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+    noise.connect(filter);
+    filter.connect(nGain);
+    nGain.connect(ctx.destination);
+    noise.start(t, 0, 0.35);
+  }
+
+  /**
+   * Rhythmic ascending pulse while the 5 AI agent cursors spin in a circular loading orbit
+   */
+  public playOrbitPulse(stepIndex: number): void {
+    const ctx = this.getContext();
+    if (!ctx || ctx.state !== 'running') return;
+
+    const t = ctx.currentTime;
+    const scaleNotes = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
+    const freq = scaleNotes[stepIndex % scaleNotes.length];
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.06, t + 0.045);
+
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.045, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.06);
   }
 }
 

@@ -21,6 +21,7 @@ import { ProjectItem } from './data/portfolioData';
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
+  const [hasStartedBuild, setHasStartedBuild] = useState<boolean>(false);
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isLightMode, setIsLightMode] = useState(false);
   const [activeSection, setActiveSection] = useState('projects');
@@ -30,15 +31,17 @@ export default function App() {
 
   const lenisRef = useRef<Lenis | null>(null);
 
-  // 4.8-Second Master Cursor Clone + 5-Agent AI Live-Build Intro Timeline
+  // 6.2-Second Smooth RIFAT. Morph -> Cursor Duplication -> 5-Agent Live Website Build Timeline
   useEffect(() => {
-    const DURATION_MS = 4800;
+    if (!hasStartedBuild) return;
+
+    const DURATION_MS = 6200;
     const startTime = performance.now();
     let rafId: number;
 
     const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const nextProgress = Math.min(1, elapsed / DURATION_MS);
+      const elapsed = Math.max(0, now - startTime);
+      const nextProgress = Math.min(1, Math.max(0, elapsed / DURATION_MS));
       setBuildProgress(nextProgress);
       if (nextProgress < 1) {
         rafId = requestAnimationFrame(tick);
@@ -47,9 +50,14 @@ export default function App() {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
+  }, [hasStartedBuild]);
+
+  const handleStartBuild = useCallback(() => {
+    setHasStartedBuild(true);
   }, []);
 
   const handleSkipBuild = useCallback(() => {
+    setHasStartedBuild(true);
     setBuildProgress(1);
   }, []);
 
@@ -78,6 +86,42 @@ export default function App() {
       lenisRef.current = null;
     };
   }, []);
+
+  // Strictly Lock Page Scrolling While on the PC Monitor Launch Screen or During the AI Agent Intro Build
+  useEffect(() => {
+    const isIntroLocked = !hasStartedBuild || buildProgress < 1;
+
+    if (isIntroLocked) {
+      window.scrollTo(0, 0);
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      lenisRef.current?.stop();
+
+      const blockScrollKeys = (e: KeyboardEvent) => {
+        const scrollKeys = [
+          'ArrowDown',
+          'ArrowUp',
+          'PageDown',
+          'PageUp',
+          'Home',
+          'End',
+          ' '
+        ];
+        if (scrollKeys.includes(e.key)) {
+          e.preventDefault();
+        }
+      };
+
+      window.addEventListener('keydown', blockScrollKeys, { passive: false });
+      return () => {
+        window.removeEventListener('keydown', blockScrollKeys);
+      };
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      lenisRef.current?.start();
+    }
+  }, [hasStartedBuild, buildProgress]);
 
   // Top 2px Crimson Scroll Progress & Active Section Scroll Spy
   useEffect(() => {
@@ -173,8 +217,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] relative selection:bg-[#e11d48] selection:text-white">
-      {/* 1. Multi-Agent AI Cursor Live-Build Intro Overlay */}
-      <Preloader buildProgress={buildProgress} onSkip={handleSkipBuild} />
+      {/* 1. Click-to-Launch PC Monitor + Circular AI Cursor Orbit Live-Build Intro Overlay */}
+      <Preloader
+        hasStarted={hasStartedBuild}
+        buildProgress={buildProgress}
+        onStartBuild={handleStartBuild}
+        onSkip={handleSkipBuild}
+      />
 
       {/* 2. Top-of-Viewport 2px Crimson Scroll Progress Bar */}
       <div

@@ -19,9 +19,9 @@ function sliceCharsByProgress(str: string, p: number, start: number, end: number
 
 function getTypedScriptText(p: number): { text: string; isTyping: boolean } {
   const full = "Hello, I'm";
-  if (p < 0.17) return { text: '', isTyping: false };
-  if (p < 0.24) {
-    return { text: sliceCharsByProgress(full, p, 0.17, 0.24), isTyping: true };
+  if (p < 0.22) return { text: '', isTyping: false };
+  if (p < 0.28) {
+    return { text: sliceCharsByProgress(full, p, 0.22, 0.28), isTyping: true };
   }
   return { text: full, isTyping: false };
 }
@@ -32,45 +32,45 @@ function getTypedNameState(p: number): {
   isFixed: boolean;
   isTyping: boolean;
 } {
-  if (p < 0.26) return { text: '', isError: false, isFixed: false, isTyping: false };
+  if (p < 0.30) return { text: '', isError: false, isFixed: false, isTyping: false };
 
-  // 0.26 -> 0.34: Type character-by-character "R" -> "RI" -> "RIF" -> "RIFT" -> "RIFTA" -> "RIFTA."
-  if (p < 0.34) {
+  // 0.30 -> 0.38: Type character-by-character "R" -> "RI" -> "RIF" -> "RIFT" -> "RIFTA" -> "RIFTA."
+  if (p < 0.38) {
     const typoStr = 'RIFTA.';
-    const text = sliceCharsByProgress(typoStr, p, 0.26, 0.34);
+    const text = sliceCharsByProgress(typoStr, p, 0.30, 0.38);
     const isError = text.length >= 5;
     return { text, isError, isFixed: false, isTyping: true };
   }
 
-  // 0.34 -> 0.37: Pause on "RIFTA." (realizing mistake, red wavy underline)
-  if (p < 0.37) {
+  // 0.38 -> 0.41: Pause on "RIFTA." (realizing mistake, red wavy underline)
+  if (p < 0.41) {
     return { text: 'RIFTA.', isError: true, isFixed: false, isTyping: true };
   }
 
-  // 0.37 -> 0.42: Backspace character-by-character "RIFTA." -> "RIFTA" -> "RIFT" -> "RIF"
-  if (p < 0.42) {
-    const ratio = (p - 0.37) / (0.42 - 0.37);
+  // 0.41 -> 0.46: Backspace character-by-character "RIFTA." -> "RIFTA" -> "RIFT" -> "RIF"
+  if (p < 0.46) {
+    const ratio = (p - 0.41) / (0.46 - 0.41);
     const states = ['RIFTA.', 'RIFTA', 'RIFT', 'RIF'];
     const idx = Math.min(states.length - 1, Math.floor(ratio * states.length));
     return { text: states[idx], isError: idx < 3, isFixed: false, isTyping: true };
   }
 
-  // 0.42 -> 0.47: Type correct letters "RIF" -> "RIFA" -> "RIFAT" -> "RIFAT."
-  if (p < 0.47) {
-    const ratio = (p - 0.42) / (0.47 - 0.42);
+  // 0.46 -> 0.51: Type correct letters "RIF" -> "RIFA" -> "RIFAT" -> "RIFAT."
+  if (p < 0.51) {
+    const ratio = (p - 0.46) / (0.51 - 0.46);
     const states = ['RIF', 'RIFA', 'RIFAT', 'RIFAT.'];
     const idx = Math.min(states.length - 1, Math.floor(ratio * states.length));
     return { text: states[idx], isError: false, isFixed: idx >= 2, isTyping: true };
   }
 
-  return { text: 'RIFAT.', isError: false, isFixed: p < 0.55, isTyping: false };
+  return { text: 'RIFAT.', isError: false, isFixed: p < 0.58, isTyping: false };
 }
 
 function getTypedSubName(p: number): { text: string; isTyping: boolean } {
   const full = 'ASHHAB BIN SHARIF';
-  if (p < 0.49) return { text: '', isTyping: false };
-  if (p < 0.535) {
-    return { text: sliceCharsByProgress(full, p, 0.49, 0.535), isTyping: true };
+  if (p < 0.52) return { text: '', isTyping: false };
+  if (p < 0.57) {
+    return { text: sliceCharsByProgress(full, p, 0.52, 0.57), isTyping: true };
   }
   return { text: full, isTyping: false };
 }
@@ -83,7 +83,7 @@ function getTypedRoleState(p: number): {
   isFixed: boolean;
   isTyping: boolean;
 } {
-  if (p < 0.55) {
+  if (p < 0.58) {
     return {
       line1: '',
       line2: '',
@@ -94,12 +94,12 @@ function getTypedRoleState(p: number): {
     };
   }
 
-  // 0.55 -> 0.63: Type character-by-character "FULL-STACK ENGINER" (mobile: "AI ARCHTECT")
-  if (p < 0.63) {
+  // 0.58 -> 0.66: Type character-by-character "FULL-STACK ENGINER" (mobile: "AI ARCHTECT")
+  if (p < 0.66) {
     const desktopTypo = 'FULL-STACK ENGINER';
     const mobileTypo = 'AI ARCHTECT';
-    const line1 = sliceCharsByProgress(desktopTypo, p, 0.55, 0.625);
-    const mobileText = sliceCharsByProgress(mobileTypo, p, 0.55, 0.625);
+    const line1 = sliceCharsByProgress(desktopTypo, p, 0.58, 0.655);
+    const mobileText = sliceCharsByProgress(mobileTypo, p, 0.58, 0.655);
     const isError = line1.length >= 17;
     return {
       line1,
@@ -111,9 +111,9 @@ function getTypedRoleState(p: number): {
     };
   }
 
-  // 0.63 -> 0.67: Backspace "ER" -> "FULL-STACK ENGIN" -> "FULL-STACK ENGI"
-  if (p < 0.67) {
-    const ratio = (p - 0.63) / (0.67 - 0.63);
+  // 0.66 -> 0.70: Backspace "ER" -> "FULL-STACK ENGIN" -> "FULL-STACK ENGI"
+  if (p < 0.70) {
+    const ratio = (p - 0.66) / (0.70 - 0.66);
     const dStates = ['FULL-STACK ENGINER', 'FULL-STACK ENGIN', 'FULL-STACK ENGI'];
     const mStates = ['AI ARCHTECT', 'AI ARCHTEC', 'AI ARCHT', 'AI ARCH'];
     const dIdx = Math.min(dStates.length - 1, Math.floor(ratio * dStates.length));
@@ -128,12 +128,12 @@ function getTypedRoleState(p: number): {
     };
   }
 
-  // 0.67 -> 0.74: Type "EER &" on line 1 and "AI ARCHITECT" on line 2
-  if (p < 0.74) {
+  // 0.70 -> 0.76: Type "EER &" on line 1 and "AI ARCHITECT" on line 2
+  if (p < 0.76) {
     const suffix = 'EER &\nAI ARCHITECT';
     const mobileSuffix = 'ITECT & DEV';
-    const typedSuffix = sliceCharsByProgress(suffix, p, 0.67, 0.74);
-    const typedMobileSuffix = sliceCharsByProgress(mobileSuffix, p, 0.67, 0.74);
+    const typedSuffix = sliceCharsByProgress(suffix, p, 0.70, 0.76);
+    const typedMobileSuffix = sliceCharsByProgress(mobileSuffix, p, 0.70, 0.76);
     const parts = ('FULL-STACK ENGI' + typedSuffix).split('\n');
     return {
       line1: parts[0] || '',
@@ -150,7 +150,7 @@ function getTypedRoleState(p: number): {
     line2: 'AI ARCHITECT',
     mobileText: 'AI ARCHITECT & DEV',
     isError: false,
-    isFixed: p < 0.82,
+    isFixed: p < 0.84,
     isTyping: false
   };
 }
@@ -354,24 +354,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const subNameState = getTypedSubName(buildProgress);
   const roleState = getTypedRoleState(buildProgress);
 
-  // Monumental PORTFOLIO wordmark: drawn as wireframe 0.28 -> 0.56, filled >= 0.58
-  const showPortfolioWord = buildProgress >= 0.28;
+  // Monumental PORTFOLIO wordmark: drawn as wireframe 0.34 -> 0.58, filled >= 0.60
+  const showPortfolioWord = buildProgress >= 0.34;
   const portfolioWidthPct =
+    buildProgress < 0.34
+      ? 0
+      : buildProgress < 0.58
+      ? Math.min(100, ((buildProgress - 0.34) / 0.24) * 100)
+      : 100;
+  const isPortfolioWireframe = buildProgress >= 0.34 && buildProgress < 0.60;
+  const showPortfolioGuideBox = buildProgress >= 0.34 && buildProgress < 0.88;
+
+  // Portrait drag-to-center & z-index layering (0.28 -> 0.50 dragged along curve, < 0.62 behind PORTFOLIO, >= 0.62 brought to front when Vision_Agent clicks button!)
+  const showPortrait = buildProgress >= 0.28;
+  const rawPortraitDrag =
     buildProgress < 0.28
       ? 0
-      : buildProgress < 0.55
-      ? Math.min(100, ((buildProgress - 0.28) / 0.27) * 100)
-      : 100;
-  const isPortfolioWireframe = buildProgress >= 0.28 && buildProgress < 0.58;
-  const showPortfolioGuideBox = buildProgress >= 0.28 && buildProgress < 0.86;
-
-  // Portrait drag-to-center & z-index layering (0.24 -> 0.48 dragged along curve, < 0.60 behind PORTFOLIO, >= 0.60 brought to front when Vision_Agent clicks button!)
-  const showPortrait = buildProgress >= 0.24;
-  const rawPortraitDrag =
-    buildProgress < 0.24
-      ? 0
-      : buildProgress < 0.48
-      ? Math.min(1, (buildProgress - 0.24) / 0.24)
+      : buildProgress < 0.50
+      ? Math.min(1, (buildProgress - 0.28) / 0.22)
       : 1;
   // Smooth ease-out curve matching Vision_Agent's curved drag path
   const portraitDragEase = 1 - Math.pow(1 - rawPortraitDrag, 3);
@@ -379,65 +379,65 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const portraitDragY =
     (1 - portraitDragEase) * 85 - Math.sin(rawPortraitDrag * Math.PI) * 22;
   const portraitScale = 0.84 + portraitDragEase * 0.16;
-  const isPortraitInFront = buildProgress >= 0.6;
-  const isVisionClickingFrontBtn = buildProgress >= 0.57 && buildProgress < 0.63;
-  const showPortraitRimGlow = buildProgress >= 0.72;
-  const showPortraitGuideBox = buildProgress >= 0.24 && buildProgress < 0.9;
+  const isPortraitInFront = buildProgress >= 0.62;
+  const isVisionClickingFrontBtn = buildProgress >= 0.59 && buildProgress < 0.65;
+  const showPortraitRimGlow = buildProgress >= 0.74;
+  const showPortraitGuideBox = buildProgress >= 0.28 && buildProgress < 0.90;
 
-  // Left bio character-by-character streaming (0.77 -> 0.88)
+  // Left bio character-by-character streaming (0.78 -> 0.89)
   const fullBioString =
     'Specializing in real-time bot infrastructure, generative AI pipelines, and high-performance web systems. Founder of Vixa Corp, building end-to-end architectures that drive measurable business outcomes (+40% inbound leads).';
-  const showBio = buildProgress >= 0.76;
-  const typedBioText = sliceCharsByProgress(fullBioString, buildProgress, 0.77, 0.88);
-  const isBioTyping = buildProgress >= 0.77 && buildProgress < 0.88;
+  const showBio = buildProgress >= 0.77;
+  const typedBioText = sliceCharsByProgress(fullBioString, buildProgress, 0.78, 0.89);
+  const isBioTyping = buildProgress >= 0.78 && buildProgress < 0.89;
 
   // Primary & Secondary CTA Buttons (Rubber-band frame drawn by UI_Agent -> Styled fill on click)
-  const showPrimaryBtn = buildProgress >= 0.34;
+  const showPrimaryBtn = buildProgress >= 0.38;
   const primaryBtnWidthScale =
-    buildProgress < 0.34
-      ? 0
-      : buildProgress < 0.48
-      ? Math.min(1, 0.25 + ((buildProgress - 0.34) / 0.14) * 0.75)
-      : 1;
-  const isPrimaryBtnStyled = buildProgress >= 0.55;
-
-  const showSecondaryBtn = buildProgress >= 0.62;
-  const secondaryBtnWidthScale =
-    buildProgress < 0.62
-      ? 0
-      : buildProgress < 0.74
-      ? Math.min(1, 0.25 + ((buildProgress - 0.62) / 0.12) * 0.75)
-      : 1;
-  const isSecondaryBtnStyled = buildProgress >= 0.79;
-  const showLocation = buildProgress >= 0.82;
-
-  // Right column metrics states & live count-up driven by Data_Agent
-  const showPurposeBadge = buildProgress >= 0.24;
-  const showMetric1 = buildProgress >= 0.38;
-  const metric1Val =
     buildProgress < 0.38
       ? 0
-      : buildProgress < 0.52
-      ? Math.round(((buildProgress - 0.38) / 0.14) * 40)
+      : buildProgress < 0.50
+      ? Math.min(1, 0.25 + ((buildProgress - 0.38) / 0.12) * 0.75)
+      : 1;
+  const isPrimaryBtnStyled = buildProgress >= 0.56;
+
+  const showSecondaryBtn = buildProgress >= 0.64;
+  const secondaryBtnWidthScale =
+    buildProgress < 0.64
+      ? 0
+      : buildProgress < 0.75
+      ? Math.min(1, 0.25 + ((buildProgress - 0.64) / 0.11) * 0.75)
+      : 1;
+  const isSecondaryBtnStyled = buildProgress >= 0.80;
+  const showLocation = buildProgress >= 0.83;
+
+  // Right column metrics states & live count-up driven by Data_Agent
+  const showPurposeBadge = buildProgress >= 0.28;
+  const showMetric1 = buildProgress >= 0.40;
+  const metric1Val =
+    buildProgress < 0.40
+      ? 0
+      : buildProgress < 0.54
+      ? Math.round(((buildProgress - 0.40) / 0.14) * 40)
       : 40;
 
-  const showMetric2 = buildProgress >= 0.55;
+  const showMetric2 = buildProgress >= 0.57;
   const metric2Val =
-    buildProgress < 0.55
+    buildProgress < 0.57
       ? 0
-      : buildProgress < 0.69
-      ? Math.round(((buildProgress - 0.55) / 0.14) * 95)
+      : buildProgress < 0.71
+      ? Math.round(((buildProgress - 0.57) / 0.14) * 95)
       : 95;
 
-  const showMetric3 = buildProgress >= 0.72;
+  const showMetric3 = buildProgress >= 0.74;
   const metric3Val =
-    buildProgress < 0.72
+    buildProgress < 0.74
       ? 0
-      : buildProgress < 0.85
-      ? Math.round(((buildProgress - 0.72) / 0.13) * 20)
+      : buildProgress < 0.86
+      ? Math.round(((buildProgress - 0.74) / 0.12) * 20)
       : 20;
 
-  const showBottomBar = buildProgress >= 0.78;
+  const showBottomBar = buildProgress >= 0.80;
 
   // Synchronize tactile keystrokes, backspaces, typo alerts, and metric ticks with DOM text/number changes
   const prevAudioStateRef = useRef<{
@@ -709,7 +709,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* LEFT COLUMN: Minimal Intro & CTA on Phone; Full Bio & Dual Buttons on Tablet/Desktop */}
           <div
             className={`col-span-5 sm:col-span-4 lg:col-span-4 flex flex-col items-start pointer-events-auto relative ${
-              isBuilding && buildProgress >= 0.16 && buildProgress < 0.88
+              isBuilding && buildProgress >= 0.22 && buildProgress < 0.89
                 ? 'p-1.5 border border-dashed border-[#38bdf8]/60 bg-[#38bdf8]/[0.02]'
                 : ''
             }`}
@@ -888,7 +888,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* RIGHT COLUMN: Compact Non-Overlapping KPIs on Phone; Full Metric Rows on Tablet/Desktop */}
           <div
             className={`col-span-4 sm:col-span-4 lg:col-span-4 flex flex-col items-end sm:items-stretch justify-end sm:pl-3 lg:pl-6 pointer-events-auto ${
-              isBuilding && buildProgress >= 0.24 && buildProgress < 0.9
+              isBuilding && buildProgress >= 0.28 && buildProgress < 0.9
                 ? 'p-1.5 border border-dashed border-[#a855f7]/60 bg-[#a855f7]/[0.02]'
                 : ''
             }`}

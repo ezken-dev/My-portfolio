@@ -35,10 +35,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isBuilding = buildProgress < 1;
   const navSweepPct =
-    buildProgress < 0.1
+    buildProgress < 0.22
       ? 0
-      : buildProgress < 0.24
-      ? Math.min(100, ((buildProgress - 0.1) / 0.14) * 100)
+      : buildProgress < 0.31
+      ? Math.min(100, ((buildProgress - 0.22) / 0.09) * 100)
       : 100;
 
   return (
@@ -47,13 +47,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         style={
           isBuilding
             ? {
-                opacity: buildProgress >= 0.1 ? 1 : 0,
+                opacity: buildProgress >= 0.22 ? 1 : 0,
                 clipPath: `inset(0 ${100 - navSweepPct}% 0 0)`
               }
             : undefined
         }
         className={`fixed top-0 left-0 right-0 z-50 bg-[var(--nav-bg)] backdrop-blur-md border-b border-[var(--border-hairline)] transition-colors duration-500 no-print ${
-          isBuilding && buildProgress >= 0.1 && buildProgress < 0.3
+          isBuilding && buildProgress >= 0.22 && buildProgress < 0.36
             ? 'border-b-dashed border-[#ff2a4b]'
             : ''
         }`}
