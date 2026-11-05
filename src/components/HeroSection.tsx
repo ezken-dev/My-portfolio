@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CV_DOWNLOAD_FILENAME, CV_PDF_URL } from '../data/portfolioData';
+import { soundEngine } from '../utils/soundEngine';
 
 const UPLOADED_PORTRAIT_PATH = '/assets/aistudio/Portfolio_Picture_d07ae912.png';
 
@@ -437,6 +438,107 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       : 20;
 
   const showBottomBar = buildProgress >= 0.78;
+
+  // Synchronize tactile keystrokes, backspaces, typo alerts, and metric ticks with DOM text/number changes
+  const prevAudioStateRef = useRef<{
+    scriptLen: number;
+    nameLen: number;
+    nameErr: boolean;
+    subNameLen: number;
+    roleLen: number;
+    roleErr: boolean;
+    bioLen: number;
+    metricSum: number;
+  }>({
+    scriptLen: 0,
+    nameLen: 0,
+    nameErr: false,
+    subNameLen: 0,
+    roleLen: 0,
+    roleErr: false,
+    bioLen: 0,
+    metricSum: 0
+  });
+
+  useEffect(() => {
+    if (!isBuilding) return;
+    const prev = prevAudioStateRef.current;
+
+    // 1. "Hello, I'm" script typing
+    const scriptLen = scriptState.text.length;
+    if (scriptLen > prev.scriptLen) {
+      const lastChar = scriptState.text[scriptLen - 1];
+      soundEngine.playKeystroke(lastChar === ' ', false);
+    }
+    prev.scriptLen = scriptLen;
+
+    // 2. "RIFTA." -> Backspace -> "RIFAT." typing & backspacing
+    const nameLen = nameState.text.length;
+    if (nameLen > prev.nameLen) {
+      soundEngine.playKeystroke(false, false);
+    } else if (nameLen < prev.nameLen) {
+      soundEngine.playBackspace();
+    }
+    prev.nameLen = nameLen;
+
+    if (nameState.isError && !prev.nameErr) {
+      soundEngine.playTypoAlert();
+    }
+    prev.nameErr = nameState.isError;
+
+    // 3. "ASHHAB BIN SHARIF" typing
+    const subLen = subNameState.text.length;
+    if (subLen > prev.subNameLen) {
+      const lastChar = subNameState.text[subLen - 1];
+      soundEngine.playKeystroke(lastChar === ' ', false);
+    }
+    prev.subNameLen = subLen;
+
+    // 4. Role title typing & backspacing ("FULL-STACK ENGINER" -> "FULL-STACK ENGINEER & AI ARCHITECT")
+    const fullRoleStr = roleState.line1 + roleState.line2;
+    const roleLen = fullRoleStr.length;
+    if (roleLen > prev.roleLen) {
+      const lastChar = fullRoleStr[roleLen - 1];
+      soundEngine.playKeystroke(lastChar === ' ', false);
+    } else if (roleLen < prev.roleLen) {
+      soundEngine.playBackspace();
+    }
+    prev.roleLen = roleLen;
+
+    if (roleState.isError && !prev.roleErr) {
+      soundEngine.playTypoAlert();
+    }
+    prev.roleErr = roleState.isError;
+
+    // 5. Bio paragraph fast streaming
+    const bioLen = typedBioText.length;
+    if (bioLen > prev.bioLen) {
+      const lastChar = typedBioText[bioLen - 1];
+      soundEngine.playKeystroke(lastChar === ' ', true);
+    }
+    prev.bioLen = bioLen;
+
+    // 6. KPI Metric counters (+40%, 95/100, 20+)
+    const metricSum = metric1Val + metric2Val + metric3Val;
+    if (metricSum > prev.metricSum) {
+      soundEngine.playMetricTick(buildProgress);
+    }
+    prev.metricSum = metricSum;
+  }, [
+    isBuilding,
+    buildProgress,
+    scriptState.text,
+    nameState.text,
+    nameState.isError,
+    subNameState.text,
+    roleState.line1,
+    roleState.line2,
+    roleState.isError,
+    typedBioText,
+    metric1Val,
+    metric2Val,
+    metric3Val
+  ]);
 
   return (
     <section

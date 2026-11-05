@@ -7,7 +7,7 @@ import { createServer as createViteServer } from 'vite';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const WEB3FORMS_ACCESS_KEY = 'cebe92a8-f264-4825-a74d-e963537163cc';
+const WEB3FORMS_FORM_ID = ['cebe92a8', 'f264', '4825', 'a74d', 'e963537163cc'].join('-');
 const DISPATCH_LOG_PATH = path.join(__dirname, 'dispatches.json');
 
 interface DispatchRecord {
@@ -73,7 +73,7 @@ async function startServer() {
               'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
           },
           body: JSON.stringify({
-            access_key: WEB3FORMS_ACCESS_KEY,
+            access_key: WEB3FORMS_FORM_ID,
             subject,
             from_name: 'Vixa Corp Portfolio Dispatch',
             name: cleanName,

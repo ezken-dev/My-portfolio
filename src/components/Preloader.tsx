@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { soundEngine } from '../utils/soundEngine';
 
 interface PreloaderProps {
   buildProgress: number; // 0 to 1 over ~4.8 seconds
@@ -646,6 +647,114 @@ const CursorIcon: React.FC<{ mode: CursorMode; color: string; pressed?: boolean 
 };
 
 export const Preloader: React.FC<PreloaderProps> = ({ buildProgress, onSkip }) => {
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const milestonesRef = useRef<{
+    click1: boolean;
+    click2: boolean;
+    cloneBurst: boolean;
+    archHeaderSnap: boolean;
+    visionGrab: boolean;
+    uiBtn1Click: boolean;
+    archFillSnap: boolean;
+    uiBtn1Snap: boolean;
+    visionFrontClick: boolean;
+    visionRimClick: boolean;
+    uiBtn2Snap: boolean;
+    complete: boolean;
+  }>({
+    click1: false,
+    click2: false,
+    cloneBurst: false,
+    archHeaderSnap: false,
+    visionGrab: false,
+    uiBtn1Click: false,
+    archFillSnap: false,
+    uiBtn1Snap: false,
+    visionFrontClick: false,
+    visionRimClick: false,
+    uiBtn2Snap: false,
+    complete: false
+  });
+
+  useEffect(() => {
+    soundEngine.unlockNow();
+  }, []);
+
+  useEffect(() => {
+    if (buildProgress >= 1) return;
+    const m = milestonesRef.current;
+
+    // Master cursor double-click & clone burst
+    if (buildProgress >= 0.068 && !m.click1) {
+      m.click1 = true;
+      soundEngine.playMouseClick();
+    }
+    if (buildProgress >= 0.092 && !m.click2) {
+      m.click2 = true;
+      soundEngine.playMouseClick();
+    }
+    if (buildProgress >= 0.11 && !m.cloneBurst) {
+      m.cloneBurst = true;
+      soundEngine.playCloneBurst();
+    }
+
+    // Arch_Agent locks top header bar
+    if (buildProgress >= 0.25 && !m.archHeaderSnap) {
+      m.archHeaderSnap = true;
+      soundEngine.playLayerSnap();
+    }
+
+    // Vision_Agent grabs portrait cutout
+    if (buildProgress >= 0.24 && !m.visionGrab) {
+      m.visionGrab = true;
+      soundEngine.playMouseClick();
+    }
+
+    // UI_Agent starts drawing primary button
+    if (buildProgress >= 0.34 && !m.uiBtn1Click) {
+      m.uiBtn1Click = true;
+      soundEngine.playMouseClick();
+    }
+
+    // UI_Agent clicks to apply #e11d48 fill to primary button
+    if (buildProgress >= 0.55 && !m.uiBtn1Snap) {
+      m.uiBtn1Snap = true;
+      soundEngine.playMouseClick();
+      soundEngine.playLayerSnap();
+    }
+
+    // Arch_Agent clicks to apply Crimson Gradient to PORTFOLIO backdrop
+    if (buildProgress >= 0.58 && !m.archFillSnap) {
+      m.archFillSnap = true;
+      soundEngine.playLayerSnap();
+    }
+
+    // Vision_Agent clicks [Bring to Front ↑] to pop portrait in front of PORTFOLIO
+    if (buildProgress >= 0.6 && !m.visionFrontClick) {
+      m.visionFrontClick = true;
+      soundEngine.playMouseClick();
+      soundEngine.playLayerSnap();
+    }
+
+    // Vision_Agent clicks Enable Rim Lighting
+    if (buildProgress >= 0.72 && !m.visionRimClick) {
+      m.visionRimClick = true;
+      soundEngine.playMouseClick();
+    }
+
+    // UI_Agent locks Download CV button
+    if (buildProgress >= 0.79 && !m.uiBtn2Snap) {
+      m.uiBtn2Snap = true;
+      soundEngine.playLayerSnap();
+    }
+
+    // All 5 agents complete & converge
+    if (buildProgress >= 0.9 && !m.complete) {
+      m.complete = true;
+      soundEngine.playBuildComplete();
+    }
+  }, [buildProgress]);
+
   if (buildProgress >= 1) return null;
 
   // Phase 0 (0.00 -> 0.11): Single Master Cursor glides into center on a blank #08080a page and clicks to clone
@@ -668,6 +777,16 @@ export const Preloader: React.FC<PreloaderProps> = ({ buildProgress, onSkip }) =
   const overlayOpacity =
     buildProgress > 0.93 ? Math.max(0, 1 - (buildProgress - 0.93) / 0.07) : 1;
 
+  const handleToggleMute = () => {
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    soundEngine.setMuted(nextMuted);
+    if (!nextMuted) {
+      soundEngine.unlockNow();
+      soundEngine.playMouseClick();
+    }
+  };
+
   return (
     <div
       id="preloader"
@@ -682,14 +801,24 @@ export const Preloader: React.FC<PreloaderProps> = ({ buildProgress, onSkip }) =
         />
       )}
 
-      {/* Subtle Skip Button in bottom-right corner */}
-      <button
-        type="button"
-        onClick={onSkip}
-        className="pointer-events-auto fixed bottom-4 right-4 z-40 px-3 py-1.5 bg-[#08080a]/85 hover:bg-[#e11d48] border border-white/15 text-white/80 hover:text-white font-mono text-[10px] uppercase tracking-widest transition-colors cursor-pointer"
-      >
-        SKIP INTRO ↗
-      </button>
+      {/* Subtle SFX Toggle + Skip Intro Controls in bottom-right corner */}
+      <div className="pointer-events-auto fixed bottom-4 right-4 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleToggleMute}
+          className="px-2.5 py-1.5 bg-[#08080a]/85 hover:border-[#e11d48] border border-white/15 text-white/80 hover:text-white font-mono text-[10px] uppercase tracking-widest transition-colors cursor-pointer"
+        >
+          {isMuted ? '🔇 SFX OFF' : '🔊 SFX ON'}
+        </button>
+
+        <button
+          type="button"
+          onClick={onSkip}
+          className="px-3 py-1.5 bg-[#08080a]/85 hover:bg-[#e11d48] border border-white/15 text-white/80 hover:text-white font-mono text-[10px] uppercase tracking-widest transition-colors cursor-pointer"
+        >
+          SKIP INTRO ↗
+        </button>
+      </div>
 
       {/* PHASE 0: Single Master Cursor Gliding to Center & Clicking to Clone */}
       {isMasterPhase && (

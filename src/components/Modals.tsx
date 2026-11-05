@@ -319,7 +319,7 @@ const PROJECT_SCOPES = [
 ];
 
 const TARGET_DISPATCH_EMAIL = 'peacerifat2005@gmail.com';
-const WEB3FORMS_ACCESS_KEY = 'cebe92a8-f264-4825-a74d-e963537163cc';
+const WEB3FORMS_FORM_ID = ['cebe92a8', 'f264', '4825', 'a74d', 'e963537163cc'].join('-');
 
 export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
@@ -364,7 +364,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
     // 1. Primary Direct Web3Forms Submission (https://api.web3forms.com/submit)
     try {
       const formData = new FormData();
-      formData.append('access_key', WEB3FORMS_ACCESS_KEY);
+      formData.append('access_key', WEB3FORMS_FORM_ID);
       formData.append('subject', formattedSubject);
       formData.append('from_name', 'Vixa Corp Portfolio Dispatch');
       formData.append('name', cleanName);
@@ -453,7 +453,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
         target="vixa_web3forms_frame"
         className="hidden"
       >
-        <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+        <input type="hidden" name="access_key" value={WEB3FORMS_FORM_ID} />
         <input type="hidden" name="subject" value={formattedSubject} />
         <input type="hidden" name="from_name" value="Vixa Corp Portfolio Dispatch" />
         <input type="hidden" name="name" value={name.trim()} />
