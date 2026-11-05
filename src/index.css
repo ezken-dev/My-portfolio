@@ -1,0 +1,278 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    /* Crimson Noir Dark Mode (Default) */
+    --bg-main: #08080a;
+    --bg-elevated: #0e0e12;
+    --bg-card: rgba(18, 18, 22, 0.78);
+    --text-main: #f4f4f6;
+    --text-muted: #8a8a93;
+    --border-hairline: rgba(255, 255, 255, 0.09);
+    --accent-primary: #e11d48;
+    --accent-bright: #ff2a4b;
+    --accent-deep: #7f1d1d;
+    --cyan-rim: rgba(56, 189, 248, 0.18);
+    --nav-bg: rgba(8, 8, 10, 0.82);
+    --card-glare: rgba(225, 29, 72, 0.14);
+    --shadow-color: rgba(0, 0, 0, 0.65);
+    --portfolio-word-grad: linear-gradient(180deg, #dc2626 0%, #7f1d1d 55%, rgba(20, 5, 8, 0.12) 100%);
+  }
+
+  body.light-mode {
+    /* Editorial Newsprint Light Mode */
+    --bg-main: #f6f5f2;
+    --bg-elevated: #eae8e3;
+    --bg-card: rgba(255, 255, 255, 0.88);
+    --text-main: #111113;
+    --text-muted: #52525b;
+    --border-hairline: rgba(0, 0, 0, 0.1);
+    --accent-primary: #dc2626;
+    --accent-bright: #e11d48;
+    --accent-deep: #991b1b;
+    --cyan-rim: rgba(14, 165, 233, 0.14);
+    --nav-bg: rgba(246, 245, 242, 0.88);
+    --card-glare: rgba(220, 38, 38, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --portfolio-word-grad: linear-gradient(180deg, #dc2626 0%, #991b1b 55%, rgba(220, 38, 38, 0.08) 100%);
+  }
+}
+
+@theme {
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-script: 'Caveat', cursive;
+}
+
+/* Smooth Foundation & Scrollbars */
+html {
+  scroll-padding-top: 88px;
+  font-family: var(--font-sans);
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  overflow-x: hidden;
+  transition: background-color 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* Monumental Background PORTFOLIO Typography */
+.monumental-portfolio-text {
+  font-family: var(--font-display);
+  font-size: clamp(3.8rem, 21.8vw, 24.5rem);
+  line-height: 0.8;
+  letter-spacing: -0.015em;
+  background: linear-gradient(180deg, #e11d48 0%, #881327 52%, rgba(25, 4, 8, 0.08) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+}
+
+body.light-mode .monumental-portfolio-text {
+  background: linear-gradient(180deg, #dc2626 0%, #991b1b 55%, rgba(220, 38, 38, 0.06) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Portrait Bottom Fade Mask */
+.portrait-bottom-mask {
+  -webkit-mask-image: linear-gradient(to bottom, black 78%, rgba(0, 0, 0, 0.65) 90%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 78%, rgba(0, 0, 0, 0.65) 90%, transparent 100%);
+}
+
+/* Continuous Slow Asterisk Rotation */
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 10s linear infinite;
+}
+
+body.motion-disabled .animate-spin-slow {
+  animation: none !important;
+}
+
+/* 1px Specular Mouse-Tracking Border & Card Spotlight */
+.specular-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .specular-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    background: radial-gradient(
+      650px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      var(--card-glare),
+      transparent 45%
+    );
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .specular-card:hover::before {
+    opacity: 1;
+  }
+
+  .specular-card:hover {
+    border-color: rgba(225, 29, 72, 0.45);
+  }
+}
+
+.specular-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Crimson Quote Card Architectural Stripes */
+.crimson-quote-card {
+  background: linear-gradient(135deg, #650d1b 0%, #3b0710 60%, #1f0408 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.crimson-quote-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.03) 0px,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 18px
+  );
+  pointer-events: none;
+}
+
+/* Clip-path Curtain Reveal Animation */
+@keyframes curtainReveal {
+  0% {
+    clip-path: inset(100% 0 0 0);
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  100% {
+    clip-path: inset(0% 0 0 0);
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.curtain-reveal-item {
+  animation: curtainReveal 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Radial Blur-Morph Theme Transition Overlay */
+.theme-glare-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 99997;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0.9;
+  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.75s ease;
+}
+
+/* Touch Device Cursor Fallback */
+@media (hover: none) and (pointer: coarse) {
+  .custom-cursor-layer {
+    display: none !important;
+  }
+}
+
+/* Executive CV Print Stylesheet (@media print) */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    cursor: auto !important;
+  }
+  .no-print,
+  #preloader,
+  #scroll-progress,
+  #film-grain,
+  .custom-cursor-layer,
+  header,
+  .filter-bar-controls,
+  .monumental-portfolio-text {
+    display: none !important;
+  }
+  main,
+  section,
+  div,
+  p,
+  span,
+  h1,
+  h2,
+  h3,
+  h4,
+  li {
+    color: #000000 !important;
+    border-color: #d4d4d8 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    clip-path: none !important;
+  }
+  .print-break-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
