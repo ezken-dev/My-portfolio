@@ -1,17 +1,23 @@
-# Minimalist Mobile Hero Declutter Plan (`< 640px`)
+# Web3Forms Live Email Dispatch Integration (`peacerifat2005@gmail.com`)
 
-## 1. Declutter Left Column on Phone (`/src/components/HeroSection.tsx`)
-- On mobile phones (`< 640px`), hide the long 8-line bio paragraph, secondary *Download CV* button (already accessible in the top navbar), and location sub-line (`hidden sm:block` / `hidden sm:inline-flex`).
-- Keep only the high-impact essentials on the bottom-left:
-  - Handwritten *"Hello, I'm"*
-  - Bold *"RIFAT."*
-  - Compact subtitle *"FULL-STACK & AI ARCHITECT"*
-  - Primary crimson *"See my work ↓"* button
+## Overview
+Replace the unactivated FormSubmit relay with **Web3Forms (`https://api.web3forms.com/submit`)** using your verified Access Key (`cebe92a8-f264-4825-a74d-e963537163cc`) so every project brief submission arrives automatically in **`peacerifat2005@gmail.com`** with zero client friction.
 
-## 2. Clean Up Right-Side Metrics & Fix `95/100` Text Collision on Phone (`/src/components/HeroSection.tsx`)
-- On phones (`< 640px`), hide the *"Every pixel. A purpose."* badge (`hidden sm:flex`) and secondary sub-lines to eliminate vertical clutter.
-- Format the 3 right-side metrics as compact, non-overlapping stacked items (`+40%` · `INBOUND ROI`, `95/100` · `LVL 6 AI CERT`, `20+` · `DEPLOYMENTS`) so `95/100` never collides with adjacent text.
+## Key Changes
 
-## 3. Anchor Portrait Directly Over `PORTFOLIO` & Streamline Top/Bottom Bars on Phone (`/src/components/HeroSection.tsx`)
-- With the verbose text hidden on `< 640px`, the Hero stage becomes compact (`min-h-[340px]`) and the center portrait (`w-[70vw] max-w-[300px] max-h-[325px]`) rises directly up into the `PORTFOLIO` wordmark—matching the exact PC silhouette without empty black space above the head.
-- Simplify the top sub-bar and bottom bar to a single clean row on mobile phones.
+### 1. Direct Web3Forms Submission in `InquiryModal` (`/src/components/Modals.tsx`)
+- Configure `WEB3FORMS_ACCESS_KEY = 'cebe92a8-f264-4825-a74d-e963537163cc'`.
+- When a client clicks **SEND DISPATCH ↗**:
+  - Send a `POST` request to `https://api.web3forms.com/submit` with:
+    - `access_key`: `'cebe92a8-f264-4825-a74d-e963537163cc'`
+    - `subject`: `Vixa Corp Project Dispatch — [Selected Discipline] ([Client Name])`
+    - `from_name`: `'Vixa Corp Portfolio Dispatch'`
+    - `name`: client's name
+    - `email`: client's email (sets `Reply-To` automatically so you can hit Reply in Gmail)
+    - `discipline`: selected primary discipline
+    - `message`: project goals & timeline
+  - Also log the dispatch to `/api/dispatch` on the local server as a backup ledger (`dispatches.json`), and if a client's browser has a strict adblocker blocking direct calls to `api.web3forms.com`, `/api/dispatch` automatically relays the payload to `https://api.web3forms.com/submit` from the server.
+- Remove the old FormSubmit hidden iframe and activation warning banner.
+
+### 2. Server-Side Web3Forms Backup Relay (`/server.ts`)
+- Update `POST /api/dispatch` in `/server.ts` to use `https://api.web3forms.com/submit` with `access_key: 'cebe92a8-f264-4825-a74d-e963537163cc'` whenever the client delegates delivery to the server, while persisting a local backup copy in `dispatches.json`.

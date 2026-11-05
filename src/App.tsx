@@ -21,7 +21,7 @@ import { ProjectItem } from './data/portfolioData';
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isLightMode, setIsLightMode] = useState(false);
   const [activeSection, setActiveSection] = useState('projects');
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -29,6 +29,29 @@ export default function App() {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
 
   const lenisRef = useRef<Lenis | null>(null);
+
+  // 4.8-Second Master Cursor Clone + 5-Agent AI Live-Build Intro Timeline
+  useEffect(() => {
+    const DURATION_MS = 4800;
+    const startTime = performance.now();
+    let rafId: number;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const nextProgress = Math.min(1, elapsed / DURATION_MS);
+      setBuildProgress(nextProgress);
+      if (nextProgress < 1) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  const handleSkipBuild = useCallback(() => {
+    setBuildProgress(1);
+  }, []);
 
   // Permanently Active Lenis Smooth Scroll + GSAP ScrollTrigger Ticker
   useEffect(() => {
@@ -150,8 +173,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] relative selection:bg-[#e11d48] selection:text-white">
-      {/* 1. Executive Protocol Preloader */}
-      <Preloader onComplete={() => setIsLoaded(true)} />
+      {/* 1. Multi-Agent AI Cursor Live-Build Intro Overlay */}
+      <Preloader buildProgress={buildProgress} onSkip={handleSkipBuild} />
 
       {/* 2. Top-of-Viewport 2px Crimson Scroll Progress Bar */}
       <div
@@ -190,6 +213,7 @@ export default function App() {
       <Navbar
         activeSection={activeSection}
         isLightMode={isLightMode}
+        buildProgress={buildProgress}
         onToggleTheme={handleToggleTheme}
         onNavigate={handleNavigate}
         onOpenInquiry={() => setIsInquiryOpen(true)}
@@ -198,7 +222,7 @@ export default function App() {
       {/* 6. Core Brutalist-Editorial Sections */}
       <main className="relative z-10">
         <HeroSection
-          isLoaded={isLoaded}
+          buildProgress={buildProgress}
           onNavigate={handleNavigate}
         />
 

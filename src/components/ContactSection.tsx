@@ -8,6 +8,12 @@ interface ContactSectionProps {
 
 const CONTACT_ROWS = [
   {
+    label: 'DIRECT EMAIL',
+    value: 'peacerifat2005@gmail.com',
+    url: 'mailto:peacerifat2005@gmail.com',
+    icon: 'fas fa-envelope'
+  },
+  {
     label: 'INSTAGRAM',
     value: 'rifat_0.1',
     url: 'https://www.instagram.com/rifat_0.1/',

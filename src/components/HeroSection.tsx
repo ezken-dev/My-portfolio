@@ -1,22 +1,169 @@
 import React, { useEffect, useRef, useState } from 'react';
-import gsap from 'gsap';
 import { CV_DOWNLOAD_FILENAME, CV_PDF_URL } from '../data/portfolioData';
 
 const UPLOADED_PORTRAIT_PATH = '/assets/aistudio/Portfolio_Picture_d07ae912.png';
 
 interface HeroSectionProps {
-  isLoaded: boolean;
+  buildProgress: number; // 0 to 1
   onNavigate: (sectionId: string) => void;
 }
 
+function sliceCharsByProgress(str: string, p: number, start: number, end: number): string {
+  if (p <= start) return '';
+  if (p >= end) return str;
+  const ratio = (p - start) / (end - start);
+  const count = Math.max(1, Math.floor(ratio * str.length));
+  return str.slice(0, count);
+}
+
+function getTypedScriptText(p: number): { text: string; isTyping: boolean } {
+  const full = "Hello, I'm";
+  if (p < 0.17) return { text: '', isTyping: false };
+  if (p < 0.24) {
+    return { text: sliceCharsByProgress(full, p, 0.17, 0.24), isTyping: true };
+  }
+  return { text: full, isTyping: false };
+}
+
+function getTypedNameState(p: number): {
+  text: string;
+  isError: boolean;
+  isFixed: boolean;
+  isTyping: boolean;
+} {
+  if (p < 0.26) return { text: '', isError: false, isFixed: false, isTyping: false };
+
+  // 0.26 -> 0.34: Type character-by-character "R" -> "RI" -> "RIF" -> "RIFT" -> "RIFTA" -> "RIFTA."
+  if (p < 0.34) {
+    const typoStr = 'RIFTA.';
+    const text = sliceCharsByProgress(typoStr, p, 0.26, 0.34);
+    const isError = text.length >= 5;
+    return { text, isError, isFixed: false, isTyping: true };
+  }
+
+  // 0.34 -> 0.37: Pause on "RIFTA." (realizing mistake, red wavy underline)
+  if (p < 0.37) {
+    return { text: 'RIFTA.', isError: true, isFixed: false, isTyping: true };
+  }
+
+  // 0.37 -> 0.42: Backspace character-by-character "RIFTA." -> "RIFTA" -> "RIFT" -> "RIF"
+  if (p < 0.42) {
+    const ratio = (p - 0.37) / (0.42 - 0.37);
+    const states = ['RIFTA.', 'RIFTA', 'RIFT', 'RIF'];
+    const idx = Math.min(states.length - 1, Math.floor(ratio * states.length));
+    return { text: states[idx], isError: idx < 3, isFixed: false, isTyping: true };
+  }
+
+  // 0.42 -> 0.47: Type correct letters "RIF" -> "RIFA" -> "RIFAT" -> "RIFAT."
+  if (p < 0.47) {
+    const ratio = (p - 0.42) / (0.47 - 0.42);
+    const states = ['RIF', 'RIFA', 'RIFAT', 'RIFAT.'];
+    const idx = Math.min(states.length - 1, Math.floor(ratio * states.length));
+    return { text: states[idx], isError: false, isFixed: idx >= 2, isTyping: true };
+  }
+
+  return { text: 'RIFAT.', isError: false, isFixed: p < 0.55, isTyping: false };
+}
+
+function getTypedSubName(p: number): { text: string; isTyping: boolean } {
+  const full = 'ASHHAB BIN SHARIF';
+  if (p < 0.49) return { text: '', isTyping: false };
+  if (p < 0.535) {
+    return { text: sliceCharsByProgress(full, p, 0.49, 0.535), isTyping: true };
+  }
+  return { text: full, isTyping: false };
+}
+
+function getTypedRoleState(p: number): {
+  line1: string;
+  line2: string;
+  mobileText: string;
+  isError: boolean;
+  isFixed: boolean;
+  isTyping: boolean;
+} {
+  if (p < 0.55) {
+    return {
+      line1: '',
+      line2: '',
+      mobileText: '',
+      isError: false,
+      isFixed: false,
+      isTyping: false
+    };
+  }
+
+  // 0.55 -> 0.63: Type character-by-character "FULL-STACK ENGINER" (mobile: "AI ARCHTECT")
+  if (p < 0.63) {
+    const desktopTypo = 'FULL-STACK ENGINER';
+    const mobileTypo = 'AI ARCHTECT';
+    const line1 = sliceCharsByProgress(desktopTypo, p, 0.55, 0.625);
+    const mobileText = sliceCharsByProgress(mobileTypo, p, 0.55, 0.625);
+    const isError = line1.length >= 17;
+    return {
+      line1,
+      line2: '',
+      mobileText,
+      isError,
+      isFixed: false,
+      isTyping: true
+    };
+  }
+
+  // 0.63 -> 0.67: Backspace "ER" -> "FULL-STACK ENGIN" -> "FULL-STACK ENGI"
+  if (p < 0.67) {
+    const ratio = (p - 0.63) / (0.67 - 0.63);
+    const dStates = ['FULL-STACK ENGINER', 'FULL-STACK ENGIN', 'FULL-STACK ENGI'];
+    const mStates = ['AI ARCHTECT', 'AI ARCHTEC', 'AI ARCHT', 'AI ARCH'];
+    const dIdx = Math.min(dStates.length - 1, Math.floor(ratio * dStates.length));
+    const mIdx = Math.min(mStates.length - 1, Math.floor(ratio * mStates.length));
+    return {
+      line1: dStates[dIdx],
+      line2: '',
+      mobileText: mStates[mIdx],
+      isError: dIdx === 0,
+      isFixed: false,
+      isTyping: true
+    };
+  }
+
+  // 0.67 -> 0.74: Type "EER &" on line 1 and "AI ARCHITECT" on line 2
+  if (p < 0.74) {
+    const suffix = 'EER &\nAI ARCHITECT';
+    const mobileSuffix = 'ITECT & DEV';
+    const typedSuffix = sliceCharsByProgress(suffix, p, 0.67, 0.74);
+    const typedMobileSuffix = sliceCharsByProgress(mobileSuffix, p, 0.67, 0.74);
+    const parts = ('FULL-STACK ENGI' + typedSuffix).split('\n');
+    return {
+      line1: parts[0] || '',
+      line2: parts[1] || '',
+      mobileText: 'AI ARCH' + typedMobileSuffix,
+      isError: false,
+      isFixed: parts[1] ? parts[1].length >= 8 : false,
+      isTyping: true
+    };
+  }
+
+  return {
+    line1: 'FULL-STACK ENGINEER &',
+    line2: 'AI ARCHITECT',
+    mobileText: 'AI ARCHITECT & DEV',
+    isError: false,
+    isFixed: p < 0.82,
+    isTyping: false
+  };
+}
+
 export const HeroSection: React.FC<HeroSectionProps> = ({
-  isLoaded,
+  buildProgress,
   onNavigate
 }) => {
   const heroRef = useRef<HTMLElement>(null);
   const bgWordRef = useRef<HTMLDivElement>(null);
   const portraitWrapRef = useRef<HTMLDivElement>(null);
   const [processedPortraitUrl, setProcessedPortraitUrl] = useState<string>(UPLOADED_PORTRAIT_PATH);
+
+  const isBuilding = buildProgress < 1;
 
   // Non-destructive Canvas Studio Grading & Edge Halo Decontamination for /assets/aistudio/Portfolio_Picture_d07ae912.png
   useEffect(() => {
@@ -180,55 +327,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     };
   }, []);
 
-  // Staggered GSAP Entrance Timeline when preloader finishes
+  // Permanent Mouse Parallax on Monumental PORTFOLIO wordmark & Frameless Cutout Portrait (Active once build finishes)
   useEffect(() => {
-    if (!isLoaded || !heroRef.current) return;
+    if (isBuilding) return;
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.hero-reveal-line',
-        { yPercent: 110, opacity: 0 },
-        {
-          yPercent: 0,
-          opacity: 1,
-          duration: 1.1,
-          stagger: 0.08,
-          ease: 'power4.out'
-        }
-      );
-
-      gsap.fromTo(
-        '.hero-portrait-entrance',
-        { y: 40, scale: 0.96, opacity: 0 },
-        {
-          y: 0,
-          scale: 1,
-          opacity: 1,
-          duration: 1.25,
-          delay: 0.1,
-          ease: 'power3.out'
-        }
-      );
-
-      gsap.fromTo(
-        '.hero-fade-item',
-        { y: 24, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.95,
-          stagger: 0.08,
-          delay: 0.2,
-          ease: 'power3.out'
-        }
-      );
-    }, heroRef);
-
-    return () => ctx.revert();
-  }, [isLoaded]);
-
-  // Permanent Mouse Parallax on Monumental PORTFOLIO wordmark & Frameless Cutout Portrait
-  useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const xNorm = e.clientX / window.innerWidth - 0.5;
       const yNorm = e.clientY / window.innerHeight - 0.5;
@@ -243,7 +345,98 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [isBuilding]);
+
+  // Compute live construction states driven by buildProgress (0 -> 1)
+  const scriptState = getTypedScriptText(buildProgress);
+  const nameState = getTypedNameState(buildProgress);
+  const subNameState = getTypedSubName(buildProgress);
+  const roleState = getTypedRoleState(buildProgress);
+
+  // Monumental PORTFOLIO wordmark: drawn as wireframe 0.28 -> 0.56, filled >= 0.58
+  const showPortfolioWord = buildProgress >= 0.28;
+  const portfolioWidthPct =
+    buildProgress < 0.28
+      ? 0
+      : buildProgress < 0.55
+      ? Math.min(100, ((buildProgress - 0.28) / 0.27) * 100)
+      : 100;
+  const isPortfolioWireframe = buildProgress >= 0.28 && buildProgress < 0.58;
+  const showPortfolioGuideBox = buildProgress >= 0.28 && buildProgress < 0.86;
+
+  // Portrait drag-to-center & z-index layering (0.24 -> 0.48 dragged along curve, < 0.60 behind PORTFOLIO, >= 0.60 brought to front when Vision_Agent clicks button!)
+  const showPortrait = buildProgress >= 0.24;
+  const rawPortraitDrag =
+    buildProgress < 0.24
+      ? 0
+      : buildProgress < 0.48
+      ? Math.min(1, (buildProgress - 0.24) / 0.24)
+      : 1;
+  // Smooth ease-out curve matching Vision_Agent's curved drag path
+  const portraitDragEase = 1 - Math.pow(1 - rawPortraitDrag, 3);
+  const portraitDragX = (1 - portraitDragEase) * 145;
+  const portraitDragY =
+    (1 - portraitDragEase) * 85 - Math.sin(rawPortraitDrag * Math.PI) * 22;
+  const portraitScale = 0.84 + portraitDragEase * 0.16;
+  const isPortraitInFront = buildProgress >= 0.6;
+  const isVisionClickingFrontBtn = buildProgress >= 0.57 && buildProgress < 0.63;
+  const showPortraitRimGlow = buildProgress >= 0.72;
+  const showPortraitGuideBox = buildProgress >= 0.24 && buildProgress < 0.9;
+
+  // Left bio character-by-character streaming (0.77 -> 0.88)
+  const fullBioString =
+    'Specializing in real-time bot infrastructure, generative AI pipelines, and high-performance web systems. Founder of Vixa Corp, building end-to-end architectures that drive measurable business outcomes (+40% inbound leads).';
+  const showBio = buildProgress >= 0.76;
+  const typedBioText = sliceCharsByProgress(fullBioString, buildProgress, 0.77, 0.88);
+  const isBioTyping = buildProgress >= 0.77 && buildProgress < 0.88;
+
+  // Primary & Secondary CTA Buttons (Rubber-band frame drawn by UI_Agent -> Styled fill on click)
+  const showPrimaryBtn = buildProgress >= 0.34;
+  const primaryBtnWidthScale =
+    buildProgress < 0.34
+      ? 0
+      : buildProgress < 0.48
+      ? Math.min(1, 0.25 + ((buildProgress - 0.34) / 0.14) * 0.75)
+      : 1;
+  const isPrimaryBtnStyled = buildProgress >= 0.55;
+
+  const showSecondaryBtn = buildProgress >= 0.62;
+  const secondaryBtnWidthScale =
+    buildProgress < 0.62
+      ? 0
+      : buildProgress < 0.74
+      ? Math.min(1, 0.25 + ((buildProgress - 0.62) / 0.12) * 0.75)
+      : 1;
+  const isSecondaryBtnStyled = buildProgress >= 0.79;
+  const showLocation = buildProgress >= 0.82;
+
+  // Right column metrics states & live count-up driven by Data_Agent
+  const showPurposeBadge = buildProgress >= 0.24;
+  const showMetric1 = buildProgress >= 0.38;
+  const metric1Val =
+    buildProgress < 0.38
+      ? 0
+      : buildProgress < 0.52
+      ? Math.round(((buildProgress - 0.38) / 0.14) * 40)
+      : 40;
+
+  const showMetric2 = buildProgress >= 0.55;
+  const metric2Val =
+    buildProgress < 0.55
+      ? 0
+      : buildProgress < 0.69
+      ? Math.round(((buildProgress - 0.55) / 0.14) * 95)
+      : 95;
+
+  const showMetric3 = buildProgress >= 0.72;
+  const metric3Val =
+    buildProgress < 0.72
+      ? 0
+      : buildProgress < 0.85
+      ? Math.round(((buildProgress - 0.72) / 0.13) * 20)
+      : 20;
+
+  const showBottomBar = buildProgress >= 0.78;
 
   return (
     <section
@@ -251,8 +444,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       ref={heroRef}
       className="relative lg:min-h-screen pt-16 flex flex-col justify-between border-b border-[var(--border-hairline)] overflow-hidden bg-[var(--bg-main)]"
     >
-      {/* 1. Top Metadata Sub-Bar (Minimal 1-line on phone, full 2-line on tablet/desktop) */}
-      <div className="border-b border-[var(--border-hairline)] bg-[var(--bg-main)]/75 backdrop-blur-sm z-30">
+      {/* 1. Top Metadata Sub-Bar (Framed in at buildProgress >= 0.18) */}
+      <div
+        style={{
+          opacity: buildProgress >= 0.18 ? 1 : 0,
+          transform: buildProgress >= 0.18 ? 'translateY(0)' : 'translateY(-10px)'
+        }}
+        className="border-b border-[var(--border-hairline)] bg-[var(--bg-main)]/75 backdrop-blur-sm z-30 transition-all duration-300"
+      >
         <div className="max-w-[1440px] mx-auto px-3 sm:px-8 py-2 sm:py-3 flex flex-row items-center justify-between gap-2">
           <div className="flex flex-col leading-tight">
             <span className="font-mono text-[9px] sm:text-[11px] font-bold tracking-[0.14em] sm:tracking-[0.16em] uppercase text-[#e11d48]">
@@ -263,12 +462,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[8.5px] sm:text-[11px] tracking-[0.14em] sm:tracking-[0.18em] uppercase text-[var(--text-muted)] shrink-0">
-            <span className="text-[#ff2a4b] font-bold text-xs sm:text-sm leading-none" aria-hidden="true">
-              •
-            </span>
-            <span className="sm:hidden">MALAYSIA</span>
-            <span className="hidden sm:inline">MALAYSIA · LEVEL 6 AI VISIONARY [95/100]</span>
+          <div className="flex items-center gap-2 sm:gap-3 font-mono text-[8.5px] sm:text-[11px] tracking-[0.14em] sm:tracking-[0.18em] uppercase text-[var(--text-muted)] shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#ff2a4b] font-bold text-xs sm:text-sm leading-none" aria-hidden="true">
+                •
+              </span>
+              <span className="sm:hidden">MALAYSIA</span>
+              <span className="hidden sm:inline">MALAYSIA · LEVEL 6 AI VISIONARY [95/100]</span>
+            </div>
           </div>
         </div>
       </div>
@@ -276,38 +477,116 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* 2. Main Hero Stage: Monumental PORTFOLIO Backdrop + Frameless Center Cutout + Minimal Left/Right Framing */}
       <div className="relative flex-1 flex flex-col justify-end min-h-[325px] sm:min-h-[520px] lg:min-h-[760px] max-w-[1440px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-2 sm:pt-6 pb-0">
         {/* LAYER 1 (z-10): Monumental Background Wordmark (PORTFOLIO) */}
-        <div className="absolute inset-x-0 top-2 sm:top-4 lg:top-6 flex justify-center z-10 pointer-events-none select-none overflow-hidden px-1 sm:px-2">
+        <div
+          style={{
+            opacity: showPortfolioWord ? 1 : 0,
+            clipPath: isBuilding ? `inset(0 ${100 - portfolioWidthPct}% 0 0)` : undefined
+          }}
+          className="absolute inset-x-0 top-2 sm:top-4 lg:top-6 flex justify-center z-10 pointer-events-none select-none overflow-hidden px-1 sm:px-2"
+        >
           <div
             ref={bgWordRef}
-            className="monumental-portfolio-text w-full text-center transition-transform duration-300 ease-out"
+            style={
+              isPortfolioWireframe
+                ? {
+                    WebkitTextStroke: '1.5px #ff2a4b',
+                    color: 'transparent',
+                    background: 'none'
+                  }
+                : undefined
+            }
+            className={`monumental-portfolio-text w-full text-center transition-transform duration-300 ease-out relative ${
+              showPortfolioGuideBox ? 'outline-1 outline-dashed outline-[#ff2a4b]/60' : ''
+            }`}
             aria-hidden="true"
           >
             PORTFOLIO
+            {showPortfolioGuideBox && (
+              <span className="absolute top-1 left-2 px-1.5 py-0.5 bg-[#e11d48] text-white font-mono text-[9px] tracking-wider uppercase leading-none">
+                {isPortfolioWireframe
+                  ? `Arch_Agent · Wireframe ${Math.round(portfolioWidthPct)}%`
+                  : 'Arch_Agent · Gradient Fill Locked'}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* LAYER 2 (z-15): Frameless Center Cutout Portrait Directly Overlapping "RTFO" */}
-        <div className="absolute inset-x-0 bottom-0 z-15 flex justify-center items-end pointer-events-none">
+        {/* LAYER 2 (z-5 while behind text during build, z-15 once Vision_Agent clicks [Bring to Front ↑]): Frameless Center Cutout Portrait */}
+        <div
+          className={`absolute inset-x-0 bottom-0 ${
+            isPortraitInFront ? 'z-15' : 'z-5'
+          } flex justify-center items-end pointer-events-none`}
+        >
           <div
             ref={portraitWrapRef}
-            className="hero-portrait-entrance relative w-[66vw] max-w-[290px] sm:w-[50vw] sm:max-w-[450px] lg:w-full lg:max-w-[660px] xl:max-w-[720px] flex justify-center items-end transition-transform duration-300 ease-out pointer-events-auto"
+            style={
+              isBuilding
+                ? {
+                    opacity: showPortrait ? (isPortraitInFront ? 1 : 0.68) : 0,
+                    transform: `translate3d(${portraitDragX}px, ${portraitDragY}px, 0) scale(${portraitScale})`
+                  }
+                : undefined
+            }
+            className={`hero-portrait-entrance relative w-[66vw] max-w-[290px] sm:w-[50vw] sm:max-w-[450px] lg:w-full lg:max-w-[660px] xl:max-w-[720px] flex justify-center items-end transition-transform duration-75 ease-out pointer-events-auto ${
+              showPortraitGuideBox
+                ? isPortraitInFront
+                  ? 'border border-dashed border-[#10b981]/80 bg-[#10b981]/[0.03]'
+                  : 'border border-dashed border-[#f59e0b]/85 bg-[#f59e0b]/[0.04]'
+                : ''
+            }`}
             data-cursor="explore"
           >
+            {/* CAD Corner Handles & Interactive [Bring to Front ↑] Layer Toolbar while Vision_Agent is working */}
+            {showPortraitGuideBox && (
+              <>
+                <span className="absolute -top-1.5 -left-1.5 w-2.5 h-2.5 bg-[#10b981] border border-white z-30" />
+                <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-[#10b981] border border-white z-30" />
+                <span className="absolute -bottom-1.5 -left-1.5 w-2.5 h-2.5 bg-[#10b981] border border-white z-30" />
+                <span className="absolute -bottom-1.5 -right-1.5 w-2.5 h-2.5 bg-[#10b981] border border-white z-30" />
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-2 py-0.5 bg-[#0c0c10]/95 border border-white/20 font-mono text-[8px] sm:text-[9.5px] uppercase tracking-wider text-white whitespace-nowrap shadow-xl">
+                  <span
+                    className={`px-1 py-0.5 text-[7.5px] sm:text-[8.5px] font-bold ${
+                      isPortraitInFront ? 'bg-[#10b981] text-black' : 'bg-[#dc2626] text-white'
+                    }`}
+                  >
+                    {isPortraitInFront ? 'z-index: 15 (FRONT)' : 'z-index: 5 (OCLUDED)'}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 border transition-all duration-100 ${
+                      isVisionClickingFrontBtn
+                        ? 'bg-[#10b981] text-black border-white scale-90 font-bold'
+                        : isPortraitInFront
+                        ? 'border-[#10b981]/60 text-[#10b981]'
+                        : 'border-[#f59e0b] text-[#f59e0b]'
+                    }`}
+                  >
+                    {isPortraitInFront ? '✓ In Front of Text' : '[Bring to Front ↑]'}
+                  </span>
+                </div>
+              </>
+            )}
+
             {/* Ambient Dual-Tone Rim Backlight Plumes (Cyan Left, Crimson Right) */}
-            <div
-              className="absolute left-[14%] top-[20%] w-24 sm:w-48 lg:w-64 h-32 sm:h-64 lg:h-80 rounded-full blur-[50px] sm:blur-[90px] pointer-events-none opacity-80"
-              style={{
-                background: 'radial-gradient(circle, rgba(56, 189, 248, 0.34) 0%, transparent 70%)'
-              }}
-              aria-hidden="true"
-            />
-            <div
-              className="absolute right-[12%] top-[16%] w-28 sm:w-56 lg:w-72 h-36 sm:h-72 lg:h-96 rounded-full blur-[55px] sm:blur-[95px] pointer-events-none opacity-90"
-              style={{
-                background: 'radial-gradient(circle, rgba(225, 29, 72, 0.52) 0%, transparent 70%)'
-              }}
-              aria-hidden="true"
-            />
+            {showPortraitRimGlow && (
+              <>
+                <div
+                  className="absolute left-[14%] top-[20%] w-24 sm:w-48 lg:w-64 h-32 sm:h-64 lg:h-80 rounded-full blur-[50px] sm:blur-[90px] pointer-events-none opacity-80 transition-opacity duration-500"
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(56, 189, 248, 0.34) 0%, transparent 70%)'
+                  }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute right-[12%] top-[16%] w-28 sm:w-56 lg:w-72 h-36 sm:h-72 lg:h-96 rounded-full blur-[55px] sm:blur-[95px] pointer-events-none opacity-90 transition-opacity duration-500"
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(225, 29, 72, 0.52) 0%, transparent 70%)'
+                  }}
+                  aria-hidden="true"
+                />
+              </>
+            )}
 
             {/* Uploaded Portrait Cutout Graded to Match Crimson Noir Theme */}
             <img
@@ -315,8 +594,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               alt="Rifat Ashhab Bin Sharif — Full-Stack Software Engineer & AI Architect"
               className="relative z-10 w-full h-auto max-h-[295px] sm:max-h-[465px] lg:max-h-[700px] xl:max-h-[750px] object-contain object-bottom portrait-bottom-mask select-none"
               style={{
-                filter:
-                  'drop-shadow(10px -2px 24px rgba(225, 29, 72, 0.42)) drop-shadow(-10px 2px 24px rgba(56, 189, 248, 0.24)) drop-shadow(0 18px 36px rgba(0, 0, 0, 0.9))'
+                filter: showPortraitRimGlow
+                  ? 'drop-shadow(10px -2px 24px rgba(225, 29, 72, 0.42)) drop-shadow(-10px 2px 24px rgba(56, 189, 248, 0.24)) drop-shadow(0 18px 36px rgba(0, 0, 0, 0.9))'
+                  : 'drop-shadow(0 12px 24px rgba(0, 0, 0, 0.85))'
               }}
             />
           </div>
@@ -325,69 +605,176 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         {/* LAYER 3 (z-20): Foreground Editorial Grid (Minimal on Phone, Full Detail on Tablet/Desktop) */}
         <div className="relative z-20 w-full grid grid-cols-12 gap-2 sm:gap-4 lg:gap-8 items-end pb-3.5 sm:pb-8 lg:pb-12 pt-28 sm:pt-28 lg:pt-44 pointer-events-none">
           {/* LEFT COLUMN: Minimal Intro & CTA on Phone; Full Bio & Dual Buttons on Tablet/Desktop */}
-          <div className="col-span-5 sm:col-span-4 lg:col-span-4 flex flex-col items-start pointer-events-auto">
-            <span className="font-script text-2xl sm:text-4xl lg:text-[3.5rem] text-[var(--text-main)] -rotate-6 mb-0.5 sm:mb-1 ml-0.5 sm:ml-1 select-none hero-fade-item drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">
-              Hello, I&apos;m
+          <div
+            className={`col-span-5 sm:col-span-4 lg:col-span-4 flex flex-col items-start pointer-events-auto relative ${
+              isBuilding && buildProgress >= 0.16 && buildProgress < 0.88
+                ? 'p-1.5 border border-dashed border-[#38bdf8]/60 bg-[#38bdf8]/[0.02]'
+                : ''
+            }`}
+          >
+            {/* Handwritten Script ("Hello, I'm" typed letter-by-letter) */}
+            <span className="font-script text-2xl sm:text-4xl lg:text-[3.5rem] text-[var(--text-main)] -rotate-6 mb-0.5 sm:mb-1 ml-0.5 sm:ml-1 select-none drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] min-h-[1.2em] inline-flex items-center">
+              <span>{scriptState.text}</span>
+              {isBuilding && scriptState.isTyping && (
+                <span className="inline-block w-[2px] h-[0.75em] bg-[#38bdf8] ml-1 animate-pulse" />
+              )}
             </span>
 
-            <div className="overflow-hidden">
-              <h1 className="hero-reveal-line font-display text-5xl sm:text-7xl lg:text-8xl xl:text-[7.25rem] tracking-tight leading-[0.86] text-[var(--text-main)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)]">
-                RIFAT<span className="text-[#e11d48]">.</span>
+            {/* RIFAT. Headline with Character-by-Character Typo ("RIFTA.") & Backspace Fix */}
+            <div className="relative">
+              <h1
+                className={`font-display text-5xl sm:text-7xl lg:text-8xl xl:text-[7.25rem] tracking-tight leading-[0.86] text-[var(--text-main)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] min-h-[0.86em] ${
+                  nameState.isError
+                    ? 'underline decoration-wavy decoration-[#ff2a4b] decoration-2 text-[#ff8fa3]'
+                    : ''
+                }`}
+              >
+                {nameState.text.endsWith('.') ? (
+                  <>
+                    {nameState.text.slice(0, -1)}
+                    <span className="text-[#e11d48]">.</span>
+                  </>
+                ) : (
+                  nameState.text
+                )}
+                {isBuilding && nameState.isTyping && (
+                  <span className="inline-block w-[3px] h-[0.75em] bg-[#38bdf8] ml-1 animate-pulse align-middle" />
+                )}
               </h1>
-            </div>
 
-            <div className="hidden sm:block overflow-hidden mt-1">
-              <p className="hero-reveal-line font-mono text-[10px] lg:text-xs tracking-[0.22em] uppercase text-[var(--text-main)]">
-                ASHHAB BIN SHARIF
-              </p>
-            </div>
-
-            <div className="overflow-hidden mt-1 sm:mt-2">
-              <p className="hero-reveal-line font-sans text-[10px] sm:text-sm lg:text-lg font-extrabold tracking-wide uppercase leading-tight text-[#e11d48] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
-                <span className="sm:hidden">AI ARCHITECT &amp; DEV</span>
-                <span className="hidden sm:inline">
-                  FULL-STACK ENGINEER &amp;
-                  <br />
-                  AI ARCHITECT
+              {isBuilding && nameState.isError && (
+                <span className="absolute -top-4 left-0 px-1.5 py-0.5 bg-[#dc2626] text-white font-mono text-[8px] uppercase tracking-wider whitespace-nowrap shadow">
+                  ⚠ TYPO: &quot;{nameState.text}&quot; → BACKSPACING
                 </span>
+              )}
+              {isBuilding && nameState.isFixed && (
+                <span className="absolute -top-4 left-0 px-1.5 py-0.5 bg-[#10b981] text-white font-mono text-[8px] uppercase tracking-wider whitespace-nowrap shadow">
+                  ✓ FIXED: &quot;RIFAT.&quot;
+                </span>
+              )}
+            </div>
+
+            {/* ASHHAB BIN SHARIF typed character-by-character */}
+            <div
+              style={{ opacity: subNameState.text ? 1 : 0 }}
+              className="hidden sm:block overflow-hidden mt-1 transition-opacity duration-150 min-h-[1.2em]"
+            >
+              <p className="font-mono text-[10px] lg:text-xs tracking-[0.22em] uppercase text-[var(--text-main)]">
+                {subNameState.text}
+                {isBuilding && subNameState.isTyping && (
+                  <span className="inline-block w-[2px] h-[0.9em] bg-[#38bdf8] ml-1 animate-pulse align-middle" />
+                )}
               </p>
             </div>
 
-            {/* Long bio hidden on phone (<640px) to keep mobile view ultra-clean */}
-            <p className="hidden sm:block hero-fade-item mt-3 lg:mt-4 text-xs lg:text-[15px] text-[var(--text-muted)] max-w-[260px] lg:max-w-[345px] leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
-              Specializing in real-time bot infrastructure, generative AI pipelines, and
-              high-performance web systems. Founder of{' '}
-              <strong className="text-[var(--text-main)] font-semibold">Vixa Corp</strong>, building
-              end-to-end architectures that drive measurable business outcomes (+40% inbound leads).
+            {/* Role Subtitle with Character-by-Character Typo ("ENGINER") & Backspace Fix */}
+            <div className="relative mt-1 sm:mt-2 min-h-[1.4em]">
+              <p
+                className={`font-sans text-[10px] sm:text-sm lg:text-lg font-extrabold tracking-wide uppercase leading-tight text-[#e11d48] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] ${
+                  roleState.isError
+                    ? 'underline decoration-wavy decoration-[#ff2a4b] bg-[#e11d48]/20 px-1'
+                    : ''
+                }`}
+              >
+                <span className="sm:hidden">{roleState.mobileText}</span>
+                <span className="hidden sm:inline">
+                  {roleState.line1}
+                  {roleState.line2 && (
+                    <>
+                      <br />
+                      {roleState.line2}
+                    </>
+                  )}
+                </span>
+                {isBuilding && roleState.isTyping && (
+                  <span className="inline-block w-[2px] h-[0.9em] bg-[#38bdf8] ml-1 animate-pulse align-middle" />
+                )}
+              </p>
+            </div>
+
+            {/* Long bio hidden on phone (<640px) to keep mobile view ultra-clean; streams character-by-character during build */}
+            <p
+              style={{
+                opacity: showBio ? 1 : 0
+              }}
+              className="hidden sm:block mt-3 lg:mt-4 text-xs lg:text-[15px] text-[var(--text-muted)] max-w-[260px] lg:max-w-[345px] leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] min-h-[5.5em]"
+            >
+              {isBuilding ? (
+                <>
+                  {typedBioText}
+                  {isBioTyping && (
+                    <span className="inline-block w-[2px] h-[0.95em] bg-[#38bdf8] ml-0.5 animate-pulse align-middle" />
+                  )}
+                </>
+              ) : (
+                <>
+                  Specializing in real-time bot infrastructure, generative AI pipelines, and
+                  high-performance web systems. Founder of{' '}
+                  <strong className="text-[var(--text-main)] font-semibold">Vixa Corp</strong>,
+                  building end-to-end architectures that drive measurable business outcomes (+40%
+                  inbound leads).
+                </>
+              )}
             </p>
 
-            {/* Primary Crimson CTA Button (plus CV button on sm:+) */}
-            <div className="hero-fade-item mt-2.5 sm:mt-5 lg:mt-6 flex flex-wrap items-center gap-2 sm:gap-2.5 lg:gap-3">
-              <button
-                type="button"
-                onClick={() => onNavigate('projects')}
-                className="bg-[#e11d48] hover:bg-[#be123c] text-white px-3.5 py-2 sm:px-5 sm:py-2.5 lg:px-7 lg:py-3.5 text-[10px] sm:text-xs lg:text-sm font-medium inline-flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-[0_10px_30px_rgba(225,29,72,0.35)]"
-                data-cursor="link"
-              >
-                <span>See my work</span>
-                <span>↓</span>
-              </button>
+            {/* Primary & Secondary CTA Buttons (Rubber-band framed by UI_Agent -> Styled on click) */}
+            <div className="mt-2.5 sm:mt-5 lg:mt-6 flex flex-wrap items-center gap-2 sm:gap-2.5 lg:gap-3">
+              {showPrimaryBtn && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('projects')}
+                  style={
+                    isBuilding && !isPrimaryBtnStyled
+                      ? {
+                          transform: `scaleX(${primaryBtnWidthScale})`,
+                          transformOrigin: 'left center'
+                        }
+                      : undefined
+                  }
+                  className={`px-3.5 py-2 sm:px-5 sm:py-2.5 lg:px-7 lg:py-3.5 text-[10px] sm:text-xs lg:text-sm font-medium inline-flex items-center justify-center gap-2 sm:gap-3 lg:gap-4 transition-colors duration-200 whitespace-nowrap shrink-0 cursor-pointer relative ${
+                    isPrimaryBtnStyled
+                      ? 'bg-[#e11d48] hover:bg-[#be123c] text-white shadow-[0_10px_30px_rgba(225,29,72,0.35)]'
+                      : 'bg-[#f59e0b]/10 border border-dashed border-[#f59e0b] text-[#f59e0b] font-mono'
+                  }`}
+                  data-cursor="link"
+                >
+                  <span>{isPrimaryBtnStyled ? 'See my work' : 'See my work'}</span>
+                  <span>↓</span>
+                </button>
+              )}
 
-              <a
-                href={CV_PDF_URL}
-                download={CV_DOWNLOAD_FILENAME}
-                target="_blank"
-                rel="noreferrer"
-                className="hidden sm:inline-flex px-4 py-2.5 lg:px-5 lg:py-3.5 text-[11px] lg:text-xs font-mono uppercase tracking-wider border border-[var(--border-hairline)] hover:border-[#e11d48] bg-[var(--bg-main)]/75 backdrop-blur-sm text-[var(--text-main)] items-center justify-center gap-2 transition-colors whitespace-nowrap shrink-0"
-                data-cursor="link"
-              >
-                <span>Download CV</span>
-                <span className="text-[#e11d48]">↓</span>
-              </a>
+              {showSecondaryBtn && (
+                <a
+                  href={CV_PDF_URL}
+                  download={CV_DOWNLOAD_FILENAME}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={
+                    isBuilding && !isSecondaryBtnStyled
+                      ? {
+                          transform: `scaleX(${secondaryBtnWidthScale})`,
+                          transformOrigin: 'left center'
+                        }
+                      : undefined
+                  }
+                  className={`hidden sm:inline-flex px-4 py-2.5 lg:px-5 lg:py-3.5 text-[11px] lg:text-xs font-mono uppercase tracking-wider items-center justify-center gap-2 transition-all whitespace-nowrap shrink-0 ${
+                    isSecondaryBtnStyled
+                      ? 'border border-[var(--border-hairline)] hover:border-[#e11d48] bg-[var(--bg-main)]/75 backdrop-blur-sm text-[var(--text-main)]'
+                      : 'border border-dashed border-[#f59e0b] bg-[#f59e0b]/10 text-[#f59e0b]'
+                  }`}
+                  data-cursor="link"
+                >
+                  <span>Download CV</span>
+                  <span className="text-[#e11d48]">↓</span>
+                </a>
+              )}
             </div>
 
             {/* Location Tag below CTA (Tablet/Desktop only) */}
-            <div className="hidden sm:flex hero-fade-item mt-4 lg:mt-6 font-mono text-[9px] lg:text-[11px] tracking-widest uppercase text-[var(--text-muted)] items-center gap-2.5">
+            <div
+              style={{ opacity: showLocation ? 1 : 0 }}
+              className="hidden sm:flex mt-4 lg:mt-6 font-mono text-[9px] lg:text-[11px] tracking-widest uppercase text-[var(--text-muted)] items-center gap-2.5 transition-opacity duration-300"
+            >
               <i className="fas fa-location-dot text-[#e11d48]" />
               <span>SUBANG JAYA, MALAYSIA · VIXA CORP</span>
             </div>
@@ -397,9 +784,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="col-span-3 sm:col-span-4 lg:col-span-4 pointer-events-none" />
 
           {/* RIGHT COLUMN: Compact Non-Overlapping KPIs on Phone; Full Metric Rows on Tablet/Desktop */}
-          <div className="col-span-4 sm:col-span-4 lg:col-span-4 flex flex-col items-end sm:items-stretch justify-end sm:pl-3 lg:pl-6 pointer-events-auto">
+          <div
+            className={`col-span-4 sm:col-span-4 lg:col-span-4 flex flex-col items-end sm:items-stretch justify-end sm:pl-3 lg:pl-6 pointer-events-auto ${
+              isBuilding && buildProgress >= 0.24 && buildProgress < 0.9
+                ? 'p-1.5 border border-dashed border-[#a855f7]/60 bg-[#a855f7]/[0.02]'
+                : ''
+            }`}
+          >
             {/* Top Purpose Badge (Tablet/Desktop only to keep phone minimal) */}
-            <div className="hidden sm:flex hero-fade-item items-center gap-3 lg:gap-4 pb-4 lg:pb-6">
+            <div
+              style={{
+                opacity: showPurposeBadge ? 1 : 0,
+                transform: showPurposeBadge ? 'translateY(0)' : 'translateY(8px)'
+              }}
+              className="hidden sm:flex items-center gap-3 lg:gap-4 pb-4 lg:pb-6 transition-all duration-300"
+            >
               <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-full border border-[#e11d48]/70 bg-[var(--bg-main)]/70 backdrop-blur-sm flex items-center justify-center text-[#e11d48] shrink-0">
                 <span className="animate-spin-slow text-base lg:text-lg leading-none select-none">
                   ✳
@@ -411,31 +810,43 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
             </div>
 
-            {/* 3 Stacked Metric Rows (Compact right-aligned on phone, side-by-side on tablet/desktop) */}
+            {/* 3 Stacked Metric Rows (Live count-up driven by Data_Agent) */}
             <div className="w-full max-w-[115px] sm:max-w-none divide-y divide-[var(--border-hairline)] border-t border-b border-[var(--border-hairline)] bg-[var(--bg-main)]/45 backdrop-blur-[2px] lg:bg-transparent lg:backdrop-blur-none">
               {/* Row 1 */}
-              <div className="hero-fade-item py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-6">
+              <div
+                style={{
+                  opacity: showMetric1 ? 1 : 0,
+                  transform: showMetric1 ? 'translateX(0)' : 'translateX(12px)'
+                }}
+                className="py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-5 transition-all duration-300"
+              >
                 <span
-                  className="font-display text-2xl sm:text-4xl lg:text-6xl text-[#e11d48] leading-none sm:w-20 lg:w-28 shrink-0 tabular-nums"
+                  className="font-display text-2xl sm:text-4xl lg:text-5xl xl:text-[3.5rem] text-[#e11d48] leading-none sm:min-w-[96px] lg:min-w-[136px] xl:min-w-[152px] shrink-0 tabular-nums whitespace-nowrap"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
-                  +40%
+                  +{metric1Val}%
                 </span>
-                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0">
+                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0 min-w-0">
                   <p className="text-[var(--text-main)] font-semibold">INBOUND ROI</p>
                   <p className="hidden sm:block text-[var(--text-muted)]">SUB-SECOND WEB SYSTEMS</p>
                 </div>
               </div>
 
               {/* Row 2 */}
-              <div className="hero-fade-item py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-6">
+              <div
+                style={{
+                  opacity: showMetric2 ? 1 : 0,
+                  transform: showMetric2 ? 'translateX(0)' : 'translateX(12px)'
+                }}
+                className="py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-5 transition-all duration-300"
+              >
                 <span
-                  className="font-display text-2xl sm:text-4xl lg:text-6xl text-[#e11d48] leading-none sm:w-20 lg:w-28 shrink-0 tabular-nums"
+                  className="font-display text-2xl sm:text-4xl lg:text-5xl xl:text-[3.5rem] text-[#e11d48] leading-none sm:min-w-[96px] lg:min-w-[136px] xl:min-w-[152px] shrink-0 tabular-nums whitespace-nowrap"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
-                  95/100
+                  {metric2Val}/100
                 </span>
-                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0">
+                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0 min-w-0">
                   <p className="text-[var(--text-main)] font-semibold">
                     <span className="sm:hidden">LVL 6 AI CERT</span>
                     <span className="hidden sm:inline">AI VISIONARY – LEVEL 6</span>
@@ -445,14 +856,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
 
               {/* Row 3 */}
-              <div className="hero-fade-item py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-6">
+              <div
+                style={{
+                  opacity: showMetric3 ? 1 : 0,
+                  transform: showMetric3 ? 'translateX(0)' : 'translateX(12px)'
+                }}
+                className="py-1.5 sm:py-3 lg:py-4 flex flex-col items-end text-right sm:flex-row sm:items-center sm:text-left sm:gap-4 lg:gap-5 transition-all duration-300"
+              >
                 <span
-                  className="font-display text-2xl sm:text-4xl lg:text-6xl text-[#e11d48] leading-none sm:w-20 lg:w-28 shrink-0 tabular-nums"
+                  className="font-display text-2xl sm:text-4xl lg:text-5xl xl:text-[3.5rem] text-[#e11d48] leading-none sm:min-w-[96px] lg:min-w-[136px] xl:min-w-[152px] shrink-0 tabular-nums whitespace-nowrap"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
-                  20+
+                  {metric3Val}+
                 </span>
-                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0">
+                <div className="font-mono text-[8px] sm:text-[9.5px] lg:text-[11px] uppercase tracking-wider leading-tight sm:leading-relaxed mt-0.5 sm:mt-0 min-w-0">
                   <p className="text-[var(--text-main)] font-semibold">
                     <span className="sm:hidden">DEPLOYMENTS</span>
                     <span className="hidden sm:inline">PRODUCTION DEPLOYMENTS</span>
@@ -475,7 +892,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       </div>
 
       {/* 3. Hero Bottom Bar (Single clean row on phone, 3-part bar on desktop) */}
-      <div className="border-t border-[var(--border-hairline)] bg-[var(--bg-main)]/90 backdrop-blur-md z-30">
+      <div
+        style={{
+          opacity: showBottomBar ? 1 : 0,
+          transform: showBottomBar ? 'translateY(0)' : 'translateY(10px)'
+        }}
+        className="border-t border-[var(--border-hairline)] bg-[var(--bg-main)]/90 backdrop-blur-md z-30 transition-all duration-300"
+      >
         <div className="max-w-[1440px] mx-auto px-3 sm:px-8 py-2.5 sm:py-3.5 flex flex-row items-center justify-between gap-2 font-mono text-[9.5px] sm:text-[11px]">
           {/* Left */}
           <a

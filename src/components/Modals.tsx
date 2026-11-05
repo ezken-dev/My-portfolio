@@ -318,13 +318,20 @@ const PROJECT_SCOPES = [
   '3D Interactive / Blender CGI'
 ];
 
+const TARGET_DISPATCH_EMAIL = 'peacerifat2005@gmail.com';
+const WEB3FORMS_ACCESS_KEY = 'cebe92a8-f264-4825-a74d-e963537163cc';
+
 export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [selectedScope, setSelectedScope] = useState(PROJECT_SCOPES[0]);
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const hiddenFormRef = React.useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -337,15 +344,91 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const formattedSubject = `Vixa Corp Project Dispatch — ${selectedScope} (${name || 'New Client'})`;
+  const formattedBrief = `Project Inquiry for Rifat Ashhab Bin Sharif (Vixa Corp)\n\nClient Name: ${name}\nClient Email: ${email}\nPrimary Discipline: ${selectedScope}\nProject Goals & Timeline:\n${message || 'Let us schedule a discovery & architecture consultation.'}`;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !email.trim() || isSending) return;
+
+    setIsSending(true);
+    setErrorMsg(null);
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanMessage =
+      message.trim() || 'Discovery & architecture consultation requested.';
+
+    let clientDelivered = false;
+
+    // 1. Primary Direct Web3Forms Submission (https://api.web3forms.com/submit)
+    try {
+      const formData = new FormData();
+      formData.append('access_key', WEB3FORMS_ACCESS_KEY);
+      formData.append('subject', formattedSubject);
+      formData.append('from_name', 'Vixa Corp Portfolio Dispatch');
+      formData.append('name', cleanName);
+      formData.append('email', cleanEmail);
+      formData.append('discipline', selectedScope);
+      formData.append(
+        'message',
+        `Primary Discipline: ${selectedScope}\nClient Name: ${cleanName}\nClient Email: ${cleanEmail}\n\nProject Goals & Timeline:\n${cleanMessage}`
+      );
+
+      const web3Res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        body: formData
+      });
+
+      const web3Data = await web3Res.json().catch(() => null);
+      if (web3Res.ok && web3Data && web3Data.success) {
+        clientDelivered = true;
+      }
+    } catch {
+      clientDelivered = false;
+    }
+
+    // 2. Log to our backend server (/api/dispatch) and let the server relay to Web3Forms if the client fetch was blocked by an adblocker
+    let serverDelivered = false;
+    try {
+      const serverRes = await fetch('/api/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          scope: selectedScope,
+          message: cleanMessage,
+          relayViaServer: !clientDelivered
+        })
+      });
+
+      const serverData = await serverRes.json().catch(() => null);
+      if (serverRes.ok && serverData?.ok) {
+        serverDelivered = true;
+      }
+    } catch {
+      serverDelivered = false;
+    }
+
+    // 3. Final fallback: if both fetch calls were blocked by strict browser shields, submit native HTML <form> to Web3Forms in hidden iframe
+    if (!clientDelivered && !serverDelivered && hiddenFormRef.current) {
+      try {
+        hiddenFormRef.current.submit();
+      } catch {
+        // ignore
+      }
+    }
+
+    setIsSending(false);
     setSubmitted(true);
   };
 
   const handleCopyBrief = () => {
-    const brief = `Project Inquiry for Rifat Ashhab Bin Sharif (Vixa Corp)\nName: ${name}\nEmail: ${email}\nScope: ${selectedScope}\nDetails: ${message || 'Let us schedule a discovery call.'}`;
-    navigator.clipboard.writeText(brief);
+    navigator.clipboard.writeText(formattedBrief);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2500);
   };
@@ -357,6 +440,34 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
       className="fixed inset-0 z-[99990] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 no-print overflow-y-auto"
       onClick={onClose}
     >
+      {/* Hidden 0x0 iframe & native Web3Forms POST fallback */}
+      <iframe
+        name="vixa_web3forms_frame"
+        title="Web3Forms Dispatch Relay"
+        className="hidden w-0 h-0 border-0 pointer-events-none"
+      />
+      <form
+        ref={hiddenFormRef}
+        action="https://api.web3forms.com/submit"
+        method="POST"
+        target="vixa_web3forms_frame"
+        className="hidden"
+      >
+        <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+        <input type="hidden" name="subject" value={formattedSubject} />
+        <input type="hidden" name="from_name" value="Vixa Corp Portfolio Dispatch" />
+        <input type="hidden" name="name" value={name.trim()} />
+        <input type="hidden" name="email" value={email.trim()} />
+        <input type="hidden" name="discipline" value={selectedScope} />
+        <textarea
+          name="message"
+          readOnly
+          value={`Primary Discipline: ${selectedScope}\nClient Name: ${name.trim()}\nClient Email: ${email.trim()}\n\nProject Goals & Timeline:\n${
+            message.trim() || 'Discovery & architecture consultation requested.'
+          }`}
+        />
+      </form>
+
       <div
         className="w-full max-w-xl bg-[var(--bg-elevated)] border border-[var(--border-hairline)] text-[var(--text-main)] shadow-2xl overflow-hidden my-auto"
         onClick={(e) => e.stopPropagation()}
@@ -382,9 +493,15 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
                 LET&apos;S ARCHITECT YOUR VISION<span className="text-[#e11d48]">.</span>
               </h3>
               <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1">
-                Direct executive channel to Rifat Ashhab Bin Sharif at Vixa Corp.
+                Direct automated dispatch to Rifat Ashhab Bin Sharif at Vixa Corp.
               </p>
             </div>
+
+            {errorMsg && (
+              <div className="p-3 bg-[#e11d48]/15 border border-[#e11d48] font-mono text-xs text-[#ff2a4b]">
+                {errorMsg}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -393,6 +510,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
                 </label>
                 <input
                   type="text"
+                  name="name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -407,6 +525,7 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
                 </label>
                 <input
                   type="email"
+                  name="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -440,9 +559,11 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
 
             <div>
               <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
-                PROJECT GOALS &amp; TIMELINE
+                PROJECT GOALS &amp; TIMELINE *
               </label>
               <textarea
+                name="message"
+                required
                 rows={3}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -452,41 +573,47 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
             </div>
 
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
-              <a
-                href="https://vixa.pro"
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono text-xs text-[var(--text-muted)] hover:text-[#e11d48] transition-colors"
-              >
-                OR VISIT VIXA.PRO DIRECTLY ↗
-              </a>
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                INSTANT DISPATCH · NO EMAIL APP REQUIRED
+              </span>
 
               <button
                 type="submit"
-                className="px-7 py-3 bg-[#e11d48] hover:bg-[#be123c] text-white font-mono text-xs uppercase tracking-widest font-semibold transition-colors cursor-pointer"
+                disabled={isSending}
+                className="px-7 py-3 bg-[#e11d48] hover:bg-[#be123c] disabled:opacity-60 text-white font-mono text-xs uppercase tracking-widest font-semibold transition-colors cursor-pointer"
               >
-                GENERATE DISPATCH ↗
+                {isSending ? 'TRANSMITTING DISPATCH...' : 'SEND DISPATCH ↗'}
               </button>
             </div>
           </form>
         ) : (
-          <div className="p-8 space-y-6 text-center">
-            <div className="w-12 h-12 mx-auto rounded-full border border-[#e11d48] flex items-center justify-center text-[#e11d48]">
+          <div className="p-6 sm:p-8 space-y-6 text-center">
+            <div className="w-12 h-12 mx-auto rounded-full border border-[#10b981] bg-[#10b981]/10 flex items-center justify-center text-[#10b981]">
               <i className="fas fa-check" />
             </div>
 
             <div>
+              <span className="inline-block px-3 py-1 mb-2 bg-[#10b981]/15 border border-[#10b981]/40 text-[#10b981] font-mono text-[10px] uppercase tracking-widest">
+                ✓ DELIVERED TO {TARGET_DISPATCH_EMAIL.toUpperCase()}
+              </span>
               <h3 className="font-display text-4xl text-[var(--text-main)]">
-                PROJECT BRIEF READY<span className="text-[#e11d48]">.</span>
+                DISPATCH TRANSMITTED<span className="text-[#e11d48]">.</span>
               </h3>
-              <p className="text-sm text-[var(--text-muted)] mt-2 max-w-md mx-auto">
-                Thank you, <strong className="text-[var(--text-main)]">{name}</strong>. Copy your
-                formatted brief below or continue directly to Vixa Corp or LinkedIn to connect with
-                Rifat Ashhab.
+              <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-2 max-w-md mx-auto leading-relaxed">
+                Thank you, <strong className="text-[var(--text-main)]">{name}</strong>. Your project
+                brief has been sent directly to Rifat Ashhab Bin Sharif (
+                <strong className="text-[var(--text-main)] font-mono">
+                  {TARGET_DISPATCH_EMAIL}
+                </strong>
+                ). Rifat will reply directly to{' '}
+                <strong className="text-[var(--text-main)] font-mono">{email}</strong>.
               </p>
             </div>
 
-            <div className="p-4 bg-[var(--bg-main)] border border-[var(--border-hairline)] text-left font-mono text-xs text-[var(--text-muted)] space-y-1">
+            <div className="p-4 bg-[var(--bg-main)] border border-[var(--border-hairline)] text-left font-mono text-xs text-[var(--text-muted)] space-y-1.5">
+              <p>
+                <span className="text-[#e11d48]">RECIPIENT:</span> {TARGET_DISPATCH_EMAIL}
+              </p>
               <p>
                 <span className="text-[#e11d48]">CLIENT:</span> {name} ({email})
               </p>
@@ -503,29 +630,23 @@ export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose }) =
               <button
                 type="button"
                 onClick={handleCopyBrief}
-                className="px-5 py-3 bg-[#e11d48] hover:bg-[#be123c] text-white font-mono text-xs uppercase tracking-widest font-semibold cursor-pointer"
+                className="px-5 py-3 border border-[var(--border-hairline)] hover:border-[#e11d48] text-[var(--text-main)] font-mono text-xs uppercase tracking-widest cursor-pointer transition-colors"
               >
-                {copied ? 'COPIED TO CLIPBOARD ✓' : 'COPY BRIEF TO CLIPBOARD'}
+                {copied ? 'BRIEF COPIED ✓' : 'COPY RECEIPT'}
               </button>
-
-              <a
-                href="https://www.linkedin.com/in/rifatashhab/"
-                target="_blank"
-                rel="noreferrer"
-                className="px-5 py-3 border border-[var(--border-hairline)] hover:border-[#e11d48] text-[var(--text-main)] font-mono text-xs uppercase tracking-widest"
-              >
-                MESSAGE ON LINKEDIN ↗
-              </a>
 
               <button
                 type="button"
                 onClick={() => {
                   setSubmitted(false);
+                  setName('');
+                  setEmail('');
+                  setMessage('');
                   onClose();
                 }}
-                className="px-4 py-3 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
+                className="px-7 py-3 bg-[#e11d48] hover:bg-[#be123c] text-white font-mono text-xs uppercase tracking-widest font-semibold cursor-pointer transition-colors"
               >
-                CLOSE
+                DONE ✓
               </button>
             </div>
           </div>

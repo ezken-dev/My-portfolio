@@ -4,6 +4,7 @@ import { CV_DOWNLOAD_FILENAME, CV_PDF_URL } from '../data/portfolioData';
 interface NavbarProps {
   activeSection: string;
   isLightMode: boolean;
+  buildProgress?: number;
   onToggleTheme: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onNavigate: (sectionId: string) => void;
   onOpenInquiry: () => void;
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
 export const Navbar: React.FC<NavbarProps> = ({
   activeSection,
   isLightMode,
+  buildProgress = 1,
   onToggleTheme,
   onNavigate,
   onOpenInquiry
@@ -31,9 +33,31 @@ export const Navbar: React.FC<NavbarProps> = ({
     onNavigate(id);
   };
 
+  const isBuilding = buildProgress < 1;
+  const navSweepPct =
+    buildProgress < 0.1
+      ? 0
+      : buildProgress < 0.24
+      ? Math.min(100, ((buildProgress - 0.1) / 0.14) * 100)
+      : 100;
+
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--nav-bg)] backdrop-blur-md border-b border-[var(--border-hairline)] transition-colors duration-500 no-print">
+      <header
+        style={
+          isBuilding
+            ? {
+                opacity: buildProgress >= 0.1 ? 1 : 0,
+                clipPath: `inset(0 ${100 - navSweepPct}% 0 0)`
+              }
+            : undefined
+        }
+        className={`fixed top-0 left-0 right-0 z-50 bg-[var(--nav-bg)] backdrop-blur-md border-b border-[var(--border-hairline)] transition-colors duration-500 no-print ${
+          isBuilding && buildProgress >= 0.1 && buildProgress < 0.3
+            ? 'border-b-dashed border-[#ff2a4b]'
+            : ''
+        }`}
+      >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Brand Wordmark */}
           <a
