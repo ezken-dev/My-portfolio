@@ -75,7 +75,10 @@ function getTypedSubName(p: number): { text: string; isTyping: boolean } {
   return { text: full, isTyping: false };
 }
 
-function getTypedRoleState(p: number): {
+function getTypedRoleState(
+  p: number,
+  isMobile: boolean
+): {
   line1: string;
   line2: string;
   mobileText: string;
@@ -83,6 +86,85 @@ function getTypedRoleState(p: number): {
   isFixed: boolean;
   isTyping: boolean;
 } {
+  if (isMobile) {
+    // Dedicated Mobile Portrait Timeline (0.53 -> 0.85) since ASHHAB BIN SHARIF and long bio are hidden on phone
+    if (p < 0.53) {
+      return {
+        line1: '',
+        line2: '',
+        mobileText: '',
+        isError: false,
+        isFixed: false,
+        isTyping: false
+      };
+    }
+
+    // 0.53 -> 0.65: Type character-by-character "AI ARCHTECT"
+    if (p < 0.65) {
+      const mobileTypo = 'AI ARCHTECT';
+      const mobileText = sliceCharsByProgress(mobileTypo, p, 0.53, 0.64);
+      const isError = mobileText.length >= 10;
+      return {
+        line1: 'FULL-STACK ENGINEER &',
+        line2: 'AI ARCHITECT',
+        mobileText,
+        isError,
+        isFixed: false,
+        isTyping: true
+      };
+    }
+
+    // 0.65 -> 0.68: Pause on "AI ARCHTECT" typo
+    if (p < 0.68) {
+      return {
+        line1: 'FULL-STACK ENGINEER &',
+        line2: 'AI ARCHITECT',
+        mobileText: 'AI ARCHTECT',
+        isError: true,
+        isFixed: false,
+        isTyping: true
+      };
+    }
+
+    // 0.68 -> 0.74: Backspace "TECT" -> "AI ARCHTEC" -> "AI ARCHT" -> "AI ARCH"
+    if (p < 0.74) {
+      const ratio = (p - 0.68) / (0.74 - 0.68);
+      const mStates = ['AI ARCHTECT', 'AI ARCHTEC', 'AI ARCHT', 'AI ARCH'];
+      const mIdx = Math.min(mStates.length - 1, Math.floor(ratio * mStates.length));
+      return {
+        line1: 'FULL-STACK ENGINEER &',
+        line2: 'AI ARCHITECT',
+        mobileText: mStates[mIdx],
+        isError: mIdx < 2,
+        isFixed: false,
+        isTyping: true
+      };
+    }
+
+    // 0.74 -> 0.85: Type "ITECT & DEV" -> "AI ARCHITECT & DEV"
+    if (p < 0.85) {
+      const mobileSuffix = 'ITECT & DEV';
+      const typedMobileSuffix = sliceCharsByProgress(mobileSuffix, p, 0.74, 0.85);
+      return {
+        line1: 'FULL-STACK ENGINEER &',
+        line2: 'AI ARCHITECT',
+        mobileText: 'AI ARCH' + typedMobileSuffix,
+        isError: false,
+        isFixed: typedMobileSuffix.length >= 6,
+        isTyping: true
+      };
+    }
+
+    return {
+      line1: 'FULL-STACK ENGINEER &',
+      line2: 'AI ARCHITECT',
+      mobileText: 'AI ARCHITECT & DEV',
+      isError: false,
+      isFixed: p < 0.9,
+      isTyping: false
+    };
+  }
+
   if (p < 0.58) {
     return {
       line1: '',
@@ -163,6 +245,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const bgWordRef = useRef<HTMLDivElement>(null);
   const portraitWrapRef = useRef<HTMLDivElement>(null);
   const [processedPortraitUrl, setProcessedPortraitUrl] = useState<string>(UPLOADED_PORTRAIT_PATH);
+  const [isMobileView, setIsMobileView] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isBuilding = buildProgress < 1;
 
@@ -352,7 +445,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const scriptState = getTypedScriptText(buildProgress);
   const nameState = getTypedNameState(buildProgress);
   const subNameState = getTypedSubName(buildProgress);
-  const roleState = getTypedRoleState(buildProgress);
+  const roleState = getTypedRoleState(buildProgress, isMobileView);
 
   // Monumental PORTFOLIO wordmark: drawn as wireframe 0.34 -> 0.58, filled >= 0.60
   const showPortfolioWord = buildProgress >= 0.34;
@@ -486,16 +579,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     }
     prev.nameErr = nameState.isError;
 
-    // 3. "ASHHAB BIN SHARIF" typing
-    const subLen = subNameState.text.length;
-    if (subLen > prev.subNameLen) {
-      const lastChar = subNameState.text[subLen - 1];
-      soundEngine.playKeystroke(lastChar === ' ', false);
+    // 3. "ASHHAB BIN SHARIF" typing (Desktop/Tablet only; hidden on mobile < 640px)
+    if (!isMobileView) {
+      const subLen = subNameState.text.length;
+      if (subLen > prev.subNameLen) {
+        const lastChar = subNameState.text[subLen - 1];
+        soundEngine.playKeystroke(lastChar === ' ', false);
+      }
+      prev.subNameLen = subLen;
     }
-    prev.subNameLen = subLen;
 
-    // 4. Role title typing & backspacing ("FULL-STACK ENGINER" -> "FULL-STACK ENGINEER & AI ARCHITECT")
-    const fullRoleStr = roleState.line1 + roleState.line2;
+    // 4. Role title typing & backspacing (Mobile: "AI ARCHTECT" -> "AI ARCHITECT & DEV"; Desktop: "FULL-STACK ENGINER" -> "FULL-STACK ENGINEER & AI ARCHITECT")
+    const fullRoleStr = isMobileView ? roleState.mobileText : roleState.line1 + roleState.line2;
     const roleLen = fullRoleStr.length;
     if (roleLen > prev.roleLen) {
       const lastChar = fullRoleStr[roleLen - 1];
@@ -510,13 +605,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     }
     prev.roleErr = roleState.isError;
 
-    // 5. Bio paragraph fast streaming
-    const bioLen = typedBioText.length;
-    if (bioLen > prev.bioLen) {
-      const lastChar = typedBioText[bioLen - 1];
-      soundEngine.playKeystroke(lastChar === ' ', true);
+    // 5. Bio paragraph fast streaming (Desktop/Tablet only; hidden on mobile < 640px)
+    if (!isMobileView) {
+      const bioLen = typedBioText.length;
+      if (bioLen > prev.bioLen) {
+        const lastChar = typedBioText[bioLen - 1];
+        soundEngine.playKeystroke(lastChar === ' ', true);
+      }
+      prev.bioLen = bioLen;
     }
-    prev.bioLen = bioLen;
 
     // 6. KPI Metric counters (+40%, 95/100, 20+)
     const metricSum = metric1Val + metric2Val + metric3Val;
@@ -526,6 +623,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     prev.metricSum = metricSum;
   }, [
     isBuilding,
+    isMobileView,
     buildProgress,
     scriptState.text,
     nameState.text,
@@ -533,6 +631,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     subNameState.text,
     roleState.line1,
     roleState.line2,
+    roleState.mobileText,
     roleState.isError,
     typedBioText,
     metric1Val,

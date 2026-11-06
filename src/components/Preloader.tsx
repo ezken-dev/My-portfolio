@@ -13,7 +13,7 @@ type CursorMode = 'pointer' | 'ibeam' | 'crosshair' | 'grab';
 interface AgentKeyframe {
   t: number; // 0 to 1
   x: number; // vw %
-  y: number; // vh %
+  y: number; // vh % on desktop; Hero-section % (0-100 of #hero height) on mobile portrait
   cx?: number; // Quadratic Bezier control point X for human curved arc
   cy?: number; // Quadratic Bezier control point Y for human curved arc
   mode?: CursorMode;
@@ -26,11 +26,13 @@ interface AgentKeyframe {
 interface AgentConfig {
   id: string;
   name: string;
+  shortName: string;
   color: string;
   bgColor: string;
   borderColor: string;
   orbitIndex: number; // 0 to 4 for 72-degree circular duplication
   keyframes: AgentKeyframe[];
+  mobileKeyframes: AgentKeyframe[];
 }
 
 // Smooth cubic ease-in-out for natural, unhurried movement (strictly clamped to [0, 1])
@@ -53,6 +55,7 @@ const AGENTS: AgentConfig[] = [
   {
     id: 'arch',
     name: 'Arch_Agent',
+    shortName: 'Arch',
     color: '#ff2a4b',
     bgColor: 'rgba(225, 29, 72, 0.94)',
     borderColor: '#ff6b81',
@@ -141,11 +144,98 @@ const AGENTS: AgentConfig[] = [
         badgeTone: 'fixed'
       },
       { t: 1.0, x: 96, y: 108, cx: 92, cy: 100, mode: 'pointer', label: '✓ Done' }
+    ],
+    // Mobile Portrait Keyframes (y is 0-100% of #hero's live bounding box height)
+    mobileKeyframes: [
+      { t: ORBIT_END_T, x: 50, y: 50, mode: 'pointer', label: 'Ready' },
+      {
+        t: 0.24,
+        x: 6,
+        y: 7,
+        cx: 24,
+        cy: 22,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Frame Navbar'
+      },
+      {
+        t: 0.31,
+        x: 90,
+        y: 7,
+        cx: 48,
+        cy: 5,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Lock Header'
+      },
+      {
+        t: 0.34,
+        x: 8,
+        y: 26,
+        cx: 48,
+        cy: 16,
+        mode: 'crosshair',
+        clicking: true,
+        label: 'Draw PORTFOLIO'
+      },
+      {
+        t: 0.52,
+        x: 90,
+        y: 34,
+        cx: 50,
+        cy: 30,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Scale Backdrop'
+      },
+      {
+        t: 0.58,
+        x: 52,
+        y: 29,
+        cx: 72,
+        cy: 32,
+        mode: 'pointer',
+        clicking: true,
+        label: 'Crimson Fill',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.68,
+        x: 8,
+        y: 95,
+        cx: 24,
+        cy: 65,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Bottom Bar'
+      },
+      {
+        t: 0.82,
+        x: 88,
+        y: 95,
+        cx: 48,
+        cy: 95,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Lock Border'
+      },
+      {
+        t: 0.92,
+        x: 84,
+        y: 92,
+        cx: 86,
+        cy: 94,
+        mode: 'pointer',
+        label: '✓ Done',
+        badgeTone: 'fixed'
+      },
+      { t: 1.0, x: 96, y: 120, cx: 90, cy: 108, mode: 'pointer', label: '✓ Done' }
     ]
   },
   {
     id: 'type',
     name: 'Type_Agent',
+    shortName: 'Type',
     color: '#38bdf8',
     bgColor: 'rgba(14, 165, 233, 0.94)',
     borderColor: '#7dd3fc',
@@ -285,11 +375,132 @@ const AGENTS: AgentConfig[] = [
         badgeTone: 'fixed'
       },
       { t: 1.0, x: -10, y: 68, cx: 4, cy: 70, mode: 'pointer', label: '✓ Done' }
+    ],
+    // Mobile Portrait Keyframes: Only types elements actually visible on phone ("Hello, I'm", "RIFAT.", "AI ARCHITECT & DEV")
+    mobileKeyframes: [
+      { t: ORBIT_END_T, x: 58, y: 54, mode: 'pointer', label: 'Ready' },
+      {
+        t: 0.22,
+        x: 7,
+        y: 49,
+        cx: 28,
+        cy: 51,
+        mode: 'ibeam',
+        clicking: true,
+        label: 'Focus Intro'
+      },
+      {
+        t: 0.28,
+        x: 27,
+        y: 49,
+        mode: 'ibeam',
+        label: '"Hello, I\'m"'
+      },
+      {
+        t: 0.3,
+        x: 7,
+        y: 60,
+        cx: 16,
+        cy: 55,
+        mode: 'ibeam',
+        clicking: true,
+        label: 'Type <h1>'
+      },
+      {
+        t: 0.38,
+        x: 34,
+        y: 60,
+        mode: 'ibeam',
+        label: '"RIFTA."',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.41,
+        x: 34,
+        y: 60,
+        mode: 'ibeam',
+        clicking: true,
+        label: '⚠ Typo!',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.46,
+        x: 20,
+        y: 60,
+        mode: 'ibeam',
+        pressed: true,
+        label: '⌫ Fix "TA."',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.51,
+        x: 33,
+        y: 60,
+        mode: 'ibeam',
+        label: '✓ "RIFAT."',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.53,
+        x: 7,
+        y: 71,
+        cx: 18,
+        cy: 66,
+        mode: 'ibeam',
+        clicking: true,
+        label: 'Role Title'
+      },
+      {
+        t: 0.65,
+        x: 32,
+        y: 71,
+        mode: 'ibeam',
+        label: '⚠ "ARCHTECT"',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.68,
+        x: 32,
+        y: 71,
+        mode: 'ibeam',
+        clicking: true,
+        label: '⚠ Fix Role',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.74,
+        x: 21,
+        y: 71,
+        mode: 'ibeam',
+        pressed: true,
+        label: '⌫ Backspace',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.85,
+        x: 37,
+        y: 71,
+        mode: 'ibeam',
+        label: '✓ AI ARCHITECT',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.92,
+        x: 18,
+        y: 71,
+        cx: 26,
+        cy: 71,
+        mode: 'pointer',
+        label: '✓ Text Done',
+        badgeTone: 'fixed'
+      },
+      { t: 1.0, x: -12, y: 70, cx: 2, cy: 70, mode: 'pointer', label: '✓ Done' }
     ]
   },
   {
     id: 'vision',
     name: 'Vision_Agent',
+    shortName: 'Vision',
     color: '#10b981',
     bgColor: 'rgba(16, 185, 129, 0.94)',
     borderColor: '#6ee7b7',
@@ -359,11 +570,79 @@ const AGENTS: AgentConfig[] = [
         badgeTone: 'fixed'
       },
       { t: 1.0, x: 50, y: -12, cx: 50, cy: 18, mode: 'pointer', label: '✓ Done' }
+    ],
+    // Mobile Portrait Keyframes: Aligned to center mobile portrait cutout & [Bring to Front ↑] toolbar
+    mobileKeyframes: [
+      { t: ORBIT_END_T, x: 54, y: 60, mode: 'pointer', label: 'Ready' },
+      {
+        t: 0.28,
+        x: 62,
+        y: 74,
+        cx: 58,
+        cy: 68,
+        mode: 'grab',
+        clicking: true,
+        pressed: true,
+        label: 'Grab Portrait'
+      },
+      {
+        t: 0.5,
+        x: 50,
+        y: 64,
+        cx: 56,
+        cy: 70,
+        mode: 'grab',
+        pressed: true,
+        label: 'Center Subject'
+      },
+      {
+        t: 0.56,
+        x: 50,
+        y: 60,
+        mode: 'pointer',
+        label: '⚠ Behind Text',
+        badgeTone: 'error'
+      },
+      {
+        t: 0.62,
+        x: 52,
+        y: 28,
+        cx: 49,
+        cy: 44,
+        mode: 'pointer',
+        clicking: true,
+        pressed: true,
+        label: '[Bring to Front ↑]',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.74,
+        x: 48,
+        y: 52,
+        cx: 50,
+        cy: 40,
+        mode: 'pointer',
+        clicking: true,
+        label: 'Rim Lighting',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.9,
+        x: 50,
+        y: 58,
+        cx: 49,
+        cy: 55,
+        mode: 'pointer',
+        label: '✓ Locked',
+        badgeTone: 'fixed'
+      },
+      { t: 1.0, x: 50, y: -15, cx: 50, cy: 15, mode: 'pointer', label: '✓ Done' }
     ]
   },
   {
     id: 'ui',
     name: 'UI_Agent',
+    shortName: 'UI',
     color: '#f59e0b',
     bgColor: 'rgba(245, 158, 11, 0.94)',
     borderColor: '#fcd34d',
@@ -434,11 +713,90 @@ const AGENTS: AgentConfig[] = [
         badgeTone: 'fixed'
       },
       { t: 1.0, x: -10, y: 90, cx: 2, cy: 89, mode: 'pointer', label: '✓ Done' }
+    ],
+    // Mobile Portrait Keyframes: Pins top metadata bar, frames "See my work ↓" button, and wires bottom VIXA.PRO bar
+    mobileKeyframes: [
+      { t: ORBIT_END_T, x: 44, y: 60, mode: 'pointer', label: 'Ready' },
+      {
+        t: 0.28,
+        x: 14,
+        y: 17,
+        cx: 28,
+        cy: 34,
+        mode: 'pointer',
+        clicking: true,
+        label: 'Pin Sub-Bar'
+      },
+      {
+        t: 0.38,
+        x: 7,
+        y: 81,
+        cx: 10,
+        cy: 52,
+        mode: 'crosshair',
+        clicking: true,
+        pressed: true,
+        label: 'Frame CTA'
+      },
+      {
+        t: 0.5,
+        x: 34,
+        y: 84,
+        cx: 20,
+        cy: 83,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'See my work ↓'
+      },
+      {
+        t: 0.56,
+        x: 18,
+        y: 82,
+        cx: 26,
+        cy: 83,
+        mode: 'pointer',
+        clicking: true,
+        label: '#e11d48 Fill',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.68,
+        x: 14,
+        y: 95,
+        cx: 16,
+        cy: 89,
+        mode: 'pointer',
+        clicking: true,
+        label: 'Link VIXA.PRO'
+      },
+      {
+        t: 0.84,
+        x: 78,
+        y: 95,
+        cx: 46,
+        cy: 95,
+        mode: 'pointer',
+        clicking: true,
+        label: '✓ Scroll CTA',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.92,
+        x: 30,
+        y: 88,
+        cx: 54,
+        cy: 92,
+        mode: 'pointer',
+        label: '✓ UI Ready',
+        badgeTone: 'fixed'
+      },
+      { t: 1.0, x: -12, y: 92, cx: 4, cy: 90, mode: 'pointer', label: '✓ Done' }
     ]
   },
   {
     id: 'metrics',
     name: 'Data_Agent',
+    shortName: 'Data',
     color: '#a855f7',
     bgColor: 'rgba(168, 85, 247, 0.94)',
     borderColor: '#d8b4fe',
@@ -517,11 +875,93 @@ const AGENTS: AgentConfig[] = [
         badgeTone: 'fixed'
       },
       { t: 1.0, x: 110, y: 78, cx: 100, cy: 80, mode: 'pointer', label: '✓ Done' }
+    ],
+    // Mobile Portrait Keyframes: Directly targets the 3 stacked right-column KPI rows on phone
+    mobileKeyframes: [
+      { t: ORBIT_END_T, x: 42, y: 54, mode: 'pointer', label: 'Ready' },
+      {
+        t: 0.28,
+        x: 76,
+        y: 46,
+        cx: 62,
+        cy: 48,
+        mode: 'crosshair',
+        clicking: true,
+        pressed: true,
+        label: 'KPI Column'
+      },
+      {
+        t: 0.4,
+        x: 74,
+        y: 53,
+        cx: 75,
+        cy: 50,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Row 01'
+      },
+      {
+        t: 0.54,
+        x: 91,
+        y: 55,
+        cx: 83,
+        cy: 54,
+        mode: 'ibeam',
+        label: '+40% ROI',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.57,
+        x: 74,
+        y: 67,
+        cx: 82,
+        cy: 61,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Row 02'
+      },
+      {
+        t: 0.71,
+        x: 91,
+        y: 69,
+        cx: 83,
+        cy: 68,
+        mode: 'ibeam',
+        label: '95/100 AI',
+        badgeTone: 'fixed'
+      },
+      {
+        t: 0.74,
+        x: 74,
+        y: 80,
+        cx: 82,
+        cy: 75,
+        mode: 'crosshair',
+        pressed: true,
+        label: 'Row 03'
+      },
+      {
+        t: 0.86,
+        x: 91,
+        y: 82,
+        cx: 83,
+        cy: 81,
+        mode: 'pointer',
+        clicking: true,
+        label: '✓ 20+ Builds',
+        badgeTone: 'fixed'
+      },
+      { t: 1.0, x: 112, y: 80, cx: 102, cy: 81, mode: 'pointer', label: '✓ Done' }
     ]
   }
 ];
 
-function getDuplicationOrbitState(orbitIndex: number, progress: number) {
+interface HeroViewportBounds {
+  topVh: number; // #hero top as % of viewport height
+  heightVh: number; // #hero height as % of viewport height
+}
+
+function getDuplicationOrbitState(orbitIndex: number, progress: number, isMobile: boolean) {
   // Normalize DUPLICATE_START_T (0.125) -> ORBIT_END_T (0.21) into 0 -> 1
   const span = ORBIT_END_T - DUPLICATE_START_T;
   const norm = Math.min(1, Math.max(0, (progress - DUPLICATE_START_T) / span));
@@ -531,10 +971,10 @@ function getDuplicationOrbitState(orbitIndex: number, progress: number) {
   const baseAngle = (orbitIndex * 2 * Math.PI) / 5 - Math.PI / 2;
   const spinAngle = baseAngle + eased * Math.PI * 2.15;
 
-  // Radius expands smoothly from 0 (exact center where Master Cursor duplicated) out to ~7.5vw
+  // Aspect-ratio-aware radius so the circular orbit looks round on both narrow portrait phones and widescreen desktops
   const radiusScale = Math.sin(norm * Math.PI * 0.75);
-  const radiusX = radiusScale * 7.2;
-  const radiusY = radiusScale * 9.0;
+  const radiusX = isMobile ? radiusScale * 16.5 : radiusScale * 7.2;
+  const radiusY = isMobile ? radiusScale * 8.2 : radiusScale * 9.0;
 
   const x = 50 + Math.cos(spinAngle) * radiusX;
   const y = 50 + Math.sin(spinAngle) * radiusY;
@@ -546,18 +986,35 @@ function getDuplicationOrbitState(orbitIndex: number, progress: number) {
     mode: 'pointer' as CursorMode,
     pressed: norm > 0.85,
     clicking: norm > 0.9,
-    label: norm < 0.45 ? 'Duplicating...' : 'Agent Ready',
+    label: norm < 0.45 ? 'Duplicating...' : 'Ready',
     badgeTone: (norm > 0.8 ? 'fixed' : 'default') as 'default' | 'error' | 'fixed'
   };
 }
 
-function interpolateCurvedAgent(agent: AgentConfig, progress: number) {
+function mapHeroYToVh(heroPctY: number, bounds: HeroViewportBounds): number {
+  return bounds.topVh + (heroPctY / 100) * bounds.heightVh;
+}
+
+function interpolateCurvedAgent(
+  agent: AgentConfig,
+  progress: number,
+  isMobile: boolean,
+  heroBounds: HeroViewportBounds
+) {
   if (progress < ORBIT_END_T) {
-    return getDuplicationOrbitState(agent.orbitIndex, progress);
+    return getDuplicationOrbitState(agent.orbitIndex, progress, isMobile);
   }
 
-  const keyframes = agent.keyframes;
-  const endOrbitPos = getDuplicationOrbitState(agent.orbitIndex, ORBIT_END_T);
+  const rawKeyframes = isMobile ? agent.mobileKeyframes : agent.keyframes;
+  const keyframes = isMobile
+    ? rawKeyframes.map((kf) => ({
+        ...kf,
+        y: mapHeroYToVh(kf.y, heroBounds),
+        cy: kf.cy !== undefined ? mapHeroYToVh(kf.cy, heroBounds) : undefined
+      }))
+    : rawKeyframes;
+
+  const endOrbitPos = getDuplicationOrbitState(agent.orbitIndex, ORBIT_END_T, isMobile);
 
   for (let i = 0; i < keyframes.length - 1; i++) {
     const curr = i === 0 ? { ...keyframes[0], x: endOrbitPos.x, y: endOrbitPos.y } : keyframes[i];
@@ -565,7 +1022,8 @@ function interpolateCurvedAgent(agent: AgentConfig, progress: number) {
     if (progress >= curr.t && progress <= next.t) {
       const span = next.t - curr.t || 0.0001;
       const rawT = (progress - curr.t) / span;
-      const isTypingSegment = curr.mode === 'ibeam' && next.mode === 'ibeam' && curr.y === next.y;
+      const isTypingSegment =
+        curr.mode === 'ibeam' && next.mode === 'ibeam' && Math.abs(curr.y - next.y) < 0.5;
       const t = isTypingSegment ? rawT : humanEase(rawT);
 
       let x: number;
@@ -581,7 +1039,7 @@ function interpolateCurvedAgent(agent: AgentConfig, progress: number) {
       }
 
       if (isTypingSegment) {
-        y += Math.sin(progress * 260) * 0.16;
+        y += Math.sin(progress * 260) * 0.14;
       }
 
       return {
@@ -599,18 +1057,20 @@ function interpolateCurvedAgent(agent: AgentConfig, progress: number) {
   return keyframes[keyframes.length - 1];
 }
 
-const CursorIcon: React.FC<{ mode: CursorMode; color: string; pressed?: boolean }> = ({
-  mode,
-  color,
-  pressed
-}) => {
+const CursorIcon: React.FC<{
+  mode: CursorMode;
+  color: string;
+  pressed?: boolean;
+  isMobile?: boolean;
+}> = ({ mode, color, pressed, isMobile }) => {
   const scaleClass = pressed ? 'scale-85' : 'scale-100';
+  const sizeScale = isMobile ? 0.86 : 1;
 
   if (mode === 'ibeam') {
     return (
       <svg
-        width="20"
-        height="24"
+        width={20 * sizeScale}
+        height={24 * sizeScale}
         viewBox="0 0 20 24"
         fill="none"
         className={`transition-transform duration-100 ${scaleClass} -translate-x-2 -translate-y-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]`}
@@ -634,8 +1094,8 @@ const CursorIcon: React.FC<{ mode: CursorMode; color: string; pressed?: boolean 
   if (mode === 'crosshair') {
     return (
       <svg
-        width="22"
-        height="22"
+        width={22 * sizeScale}
+        height={22 * sizeScale}
         viewBox="0 0 22 22"
         fill="none"
         className={`transition-transform duration-100 ${scaleClass} -translate-x-2.5 -translate-y-2.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]`}
@@ -660,8 +1120,8 @@ const CursorIcon: React.FC<{ mode: CursorMode; color: string; pressed?: boolean 
   if (mode === 'grab') {
     return (
       <svg
-        width="24"
-        height="24"
+        width={24 * sizeScale}
+        height={24 * sizeScale}
         viewBox="0 0 24 24"
         fill="none"
         className={`transition-transform duration-100 ${scaleClass} -translate-x-2 -translate-y-2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]`}
@@ -679,8 +1139,8 @@ const CursorIcon: React.FC<{ mode: CursorMode; color: string; pressed?: boolean 
 
   return (
     <svg
-      width="22"
-      height="22"
+      width={22 * sizeScale}
+      height={22 * sizeScale}
       viewBox="0 0 24 24"
       fill="none"
       className={`transition-transform duration-100 ${scaleClass} drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]`}
@@ -703,6 +1163,37 @@ export const Preloader: React.FC<PreloaderProps> = ({
   onSkip
 }) => {
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  );
+  const [heroBounds, setHeroBounds] = useState<HeroViewportBounds>({
+    topVh: 0,
+    heightVh: 56
+  });
+
+  // Measure live #hero bounding box so mobile portrait keyframes always land on the exact Hero elements
+  useEffect(() => {
+    const updateViewportAndHeroBounds = () => {
+      const vw = window.innerWidth;
+      const vh = Math.max(1, window.innerHeight);
+      setIsMobile(vw < 640);
+
+      const heroEl = document.getElementById('hero');
+      if (heroEl) {
+        const rect = heroEl.getBoundingClientRect();
+        if (rect.height > 100) {
+          setHeroBounds({
+            topVh: (rect.top / vh) * 100,
+            heightVh: (rect.height / vh) * 100
+          });
+        }
+      }
+    };
+
+    updateViewportAndHeroBounds();
+    window.addEventListener('resize', updateViewportAndHeroBounds, { passive: true });
+    return () => window.removeEventListener('resize', updateViewportAndHeroBounds);
+  }, [hasStarted, buildProgress < 0.25]);
 
   const milestonesRef = useRef<{
     morphSnap: boolean;
@@ -830,7 +1321,7 @@ export const Preloader: React.FC<PreloaderProps> = ({
       soundEngine.playMouseClick();
     }
 
-    // 12. UI_Agent locks Download CV button
+    // 12. UI_Agent locks secondary/scroll CTA
     if (buildProgress >= 0.8 && !m.uiBtn2Snap) {
       m.uiBtn2Snap = true;
       soundEngine.playLayerSnap();
@@ -960,7 +1451,7 @@ export const Preloader: React.FC<PreloaderProps> = ({
 
           {/* Subtle Circular Duplication Ring while the 5 Agents spin out from the Master Cursor */}
           {isDuplicatingOrbit && (
-            <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border border-dashed border-white/15 animate-spin-slow" />
+            <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full border border-dashed border-white/15 animate-spin-slow" />
           )}
         </div>
       )}
@@ -1032,7 +1523,7 @@ export const Preloader: React.FC<PreloaderProps> = ({
       {/* 5 Duplicated AI Agent Cursors (0.125 -> 1.00) */}
       {showDuplicatedAgents &&
         AGENTS.map((agent) => {
-          const state = interpolateCurvedAgent(agent, buildProgress);
+          const state = interpolateCurvedAgent(agent, safeProgress, isMobile, heroBounds);
 
           const badgeBg =
             state.badgeTone === 'error'
@@ -1040,6 +1531,9 @@ export const Preloader: React.FC<PreloaderProps> = ({
               : state.badgeTone === 'fixed'
               ? 'rgba(16, 185, 129, 0.95)'
               : agent.bgColor;
+
+          // Flip badge to the left side of the cursor when near the right edge on phone portrait so it never overflows
+          const flipBadgeLeft = isMobile && state.x > 58;
 
           return (
             <div
@@ -1053,7 +1547,7 @@ export const Preloader: React.FC<PreloaderProps> = ({
               {state.clicking && (
                 <span
                   style={{ borderColor: agent.color }}
-                  className="absolute -left-3.5 -top-3.5 w-8 h-8 rounded-full border-2 animate-ping opacity-80"
+                  className="absolute -left-3.5 -top-3.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 animate-ping opacity-80"
                 />
               )}
 
@@ -1061,6 +1555,7 @@ export const Preloader: React.FC<PreloaderProps> = ({
                 mode={state.mode ?? 'pointer'}
                 color={agent.color}
                 pressed={state.pressed || state.clicking}
+                isMobile={isMobile}
               />
 
               <div
@@ -1068,15 +1563,19 @@ export const Preloader: React.FC<PreloaderProps> = ({
                   backgroundColor: badgeBg,
                   borderColor: agent.borderColor
                 }}
-                className="ml-3.5 -mt-1 px-2 py-0.5 rounded-xs border text-white shadow-[0_8px_20px_rgba(0,0,0,0.8)] whitespace-nowrap flex items-center gap-1.5"
+                className={`${
+                  flipBadgeLeft ? '-translate-x-full -ml-1.5' : 'ml-2.5 sm:ml-3.5'
+                } -mt-1 px-1.5 sm:px-2 py-0.5 rounded-xs border text-white shadow-[0_8px_20px_rgba(0,0,0,0.8)] whitespace-nowrap flex items-center gap-1 sm:gap-1.5`}
               >
-                <span className="font-mono text-[8.5px] font-bold uppercase tracking-wider">
-                  {agent.name}
+                <span className="font-mono text-[7.5px] sm:text-[8.5px] font-bold uppercase tracking-wider">
+                  {isMobile ? agent.shortName : agent.name}
                 </span>
                 {state.label && (
                   <>
-                    <span className="opacity-50 text-[8px]">·</span>
-                    <span className="font-mono text-[8.5px] text-white/95">{state.label}</span>
+                    <span className="opacity-50 text-[7.5px] sm:text-[8px]">·</span>
+                    <span className="font-mono text-[7.5px] sm:text-[8.5px] text-white/95">
+                      {state.label}
+                    </span>
                   </>
                 )}
               </div>
